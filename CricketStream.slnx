@@ -1,0 +1,13 @@
+﻿<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CricketStream.API/CricketStream.API.csproj" />
+    <Project Path="src/CricketStream.Application/CricketStream.Application.csproj" />
+    <Project Path="src/CricketStream.Contracts/CricketStream.Contracts.csproj" />
+    <Project Path="src/CricketStream.Domain/CricketStream.Domain.csproj" />
+    <Project Path="src/CricketStream.Infrastructure/CricketStream.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CricketStream.Application.Tests/CricketStream.Application.Tests.csproj" />
+    <Project Path="tests/CricketStream.Domain.Tests/CricketStream.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

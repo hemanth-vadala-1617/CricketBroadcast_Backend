@@ -1,0 +1,6 @@
+@CricketStream.API_HostAddress = http://localhost:5141
+
+GET {{CricketStream.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,22 @@
+﻿# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+# Test / coverage
+TestResults/
+*.trx
+coverage*/
+# Runtime
+logs/
+*.log
+uploads/
+# Secrets (use dotnet user-secrets or env vars)
+appsettings.*.local.json
+.env
+*.pfx
