@@ -1,6 +1,7 @@
 using CricketStream.Application;
 using CricketStream.Application.Common;
 using CricketStream.Application.Features.Graphics;
+using CricketStream.Application.Features.Master;
 using CricketStream.Application.Features.Matches;
 using CricketStream.Application.Features.Revisions;
 using CricketStream.Application.Features.Scoring;
@@ -44,6 +45,7 @@ public sealed class MatchFixture : IDisposable
     public IScoringService Scoring => Sp.GetRequiredService<IScoringService>();
     public IRevisionService Revisions => Sp.GetRequiredService<IRevisionService>();
     public IGraphicsService Graphics => Sp.GetRequiredService<IGraphicsService>();
+    public IMasterDataService MasterData => Sp.GetRequiredService<IMasterDataService>();
     public CricketDbContext Db => Sp.GetRequiredService<CricketDbContext>();
 
     public static MatchRules T20Rules() => new() { Name = "T20", OversPerInnings = 20, MaxOversPerBowler = 4, PowerplayOvers = 6 };

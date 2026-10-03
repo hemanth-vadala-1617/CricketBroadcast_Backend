@@ -1,4 +1,4 @@
-﻿namespace CricketStream.Contracts.Matches;
+namespace CricketStream.Contracts.Matches;
 
 public class SquadPlayerRequest {
     public Guid PlayerId { get; set; }
@@ -7,18 +7,25 @@ public class SquadPlayerRequest {
     public bool IsWicketKeeper { get; set; }
     public int BattingOrder { get; set; }
 }
+public class SquadStaffRequest {
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+}
 public class SetSquadRequest {
     public Guid TeamId { get; set; }
     public List<SquadPlayerRequest> Players { get; set; } = new();
+    public List<SquadStaffRequest> Staff { get; set; } = new();
 }
 public class SquadDto {
     public Guid TeamId { get; set; }
     public List<SquadMemberDto> Players { get; set; } = new();
+    public List<SquadStaffRequest> Staff { get; set; } = new();
 }
 public class SquadMemberDto {
     public Guid PlayerId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? PhotoUrl { get; set; }
+    public string Role { get; set; } = string.Empty;
     public bool IsPlayingXI { get; set; }
     public bool IsCaptain { get; set; }
     public bool IsWicketKeeper { get; set; }

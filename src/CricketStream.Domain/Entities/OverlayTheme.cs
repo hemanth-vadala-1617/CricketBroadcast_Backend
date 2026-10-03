@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Common;
+using CricketStream.Domain.Common;
 namespace CricketStream.Domain.Entities;
 public class OverlayTheme : BaseEntity {
     public string Name { get; set; } = string.Empty;
@@ -9,4 +9,6 @@ public class OverlayTheme : BaseEntity {
     public string? LogoUrl { get; set; }
     public string? WatermarkUrl { get; set; }
     public string? WatermarkText { get; set; }
+    // false: both score bars use PrimaryColor (the theme decides). true: each bar wears its own team colour, like the TV graphic.
+    public bool UseTeamColors { get; set; }
 }

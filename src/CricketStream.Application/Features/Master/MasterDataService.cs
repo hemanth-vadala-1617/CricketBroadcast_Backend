@@ -1,5 +1,6 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Application.Features;
+using CricketStream.Application.Features.Matches;
 using CricketStream.Application.Interfaces;
 using CricketStream.Contracts.Master;
 using CricketStream.Contracts.Players;
@@ -18,9 +19,30 @@ public class MasterDataService : IMasterDataService {
     private readonly IValidator<MatchRulesDto> _rules;
     private readonly IValidator<OverlayThemeDto> _theme;
 
+    private readonly IMatchStateService _state;
+    private readonly IMatchBroadcaster _broadcaster;
+
     public MasterDataService(ICricketDbContext db, IValidator<PlayerDto> player, IValidator<VenueDto> venue,
-        IValidator<TournamentDto> tournament, IValidator<MatchRulesDto> rules, IValidator<OverlayThemeDto> theme) {
+        IValidator<TournamentDto> tournament, IValidator<MatchRulesDto> rules, IValidator<OverlayThemeDto> theme,
+        IMatchStateService state, IMatchBroadcaster broadcaster) {
         _db = db; _player = player; _venue = venue; _tournament = tournament; _rules = rules; _theme = theme;
+        _state = state; _broadcaster = broadcaster;
+    }
+
+    // A theme edit must reach overlays that are already on air: bump each affected match and broadcast its new state.
+    private async Task PushThemeAsync(Guid themeId)
+    {
+        var affected = await _db.Matches.Where(m => m.OverlayThemeId == themeId
+            || (m.OverlayThemeId == null && _db.Tournaments.Any(t => t.Id == m.TournamentId && t.OverlayThemeId == themeId))).ToListAsync();
+        if (affected.Count == 0) return;
+        foreach (var m in affected) { m.Version++; m.UpdatedAt = DateTimeOffset.UtcNow; }
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException) { return; }   // a scorer was mid-ball; their next update carries the new theme anyway
+        foreach (var m in affected)
+        {
+            var state = await _state.GetAsync(m.Id);
+            if (state is not null) await _broadcaster.BroadcastStateAsync(m.Id, state);
+        }
     }
 
     private static Result<T> Bad<T>(string message) => Result<T>.Fail(Fail.Validation(message));
@@ -32,6 +54,8 @@ public class MasterDataService : IMasterDataService {
         Id = p.Id, CurrentTeamId = p.CurrentTeamId, CurrentTeamName = p.CurrentTeam?.Name, FirstName = p.FirstName, LastName = p.LastName,
         DisplayName = p.DisplayName, ShortName = p.ShortName, PhotoUrl = p.PhotoUrl, JerseyNumber = p.JerseyNumber,
         BattingStyle = p.BattingStyle, BowlingStyle = p.BowlingStyle, PlayerRole = p.PlayerRole.ToString(), IsActive = p.IsActive,
+        CareerLabel = p.CareerLabel, CareerMatches = p.CareerMatches, CareerRuns = p.CareerRuns, CareerAverage = p.CareerAverage,
+        CareerStrikeRate = p.CareerStrikeRate, CareerFifties = p.CareerFifties, CareerHundreds = p.CareerHundreds,
     };
 
     public async Task<List<PlayerDto>> ListPlayersAsync(string? search, Guid? teamId, bool includeInactive) {
@@ -57,6 +81,8 @@ public class MasterDataService : IMasterDataService {
         p.DisplayName = dto.DisplayName.Trim(); p.ShortName = dto.ShortName.Trim(); p.PhotoUrl = dto.PhotoUrl; p.JerseyNumber = dto.JerseyNumber;
         p.BattingStyle = dto.BattingStyle ?? ""; p.BowlingStyle = dto.BowlingStyle ?? "";
         p.PlayerRole = Enum.Parse<PlayerRole>(dto.PlayerRole, true); p.IsActive = dto.IsActive; p.UpdatedAt = DateTimeOffset.UtcNow;
+        p.CareerLabel = dto.CareerLabel?.Trim() ?? ""; p.CareerMatches = dto.CareerMatches; p.CareerRuns = dto.CareerRuns; p.CareerAverage = dto.CareerAverage;
+        p.CareerStrikeRate = dto.CareerStrikeRate; p.CareerFifties = dto.CareerFifties; p.CareerHundreds = dto.CareerHundreds;
         await _db.SaveChangesAsync();
         return Result<PlayerDto>.Ok((await GetPlayerAsync(p.Id))!);
     }
@@ -183,7 +209,7 @@ public class MasterDataService : IMasterDataService {
     // ---------------- themes ----------------
     private static OverlayThemeDto Map(OverlayTheme t) => new() {
         Id = t.Id, Name = t.Name, PrimaryColor = t.PrimaryColor, SecondaryColor = t.SecondaryColor, AccentColor = t.AccentColor,
-        BackgroundUrl = t.BackgroundUrl, LogoUrl = t.LogoUrl, WatermarkUrl = t.WatermarkUrl, WatermarkText = t.WatermarkText,
+        BackgroundUrl = t.BackgroundUrl, LogoUrl = t.LogoUrl, WatermarkUrl = t.WatermarkUrl, WatermarkText = t.WatermarkText, UseTeamColors = t.UseTeamColors,
     };
 
     public async Task<List<OverlayThemeDto>> ListThemesAsync() =>
@@ -197,8 +223,10 @@ public class MasterDataService : IMasterDataService {
         else { t = await _db.OverlayThemes.FirstOrDefaultAsync(x => x.Id == id); if (t is null) return Missing<OverlayThemeDto>("Theme"); }
         t.Name = dto.Name.Trim(); t.PrimaryColor = dto.PrimaryColor; t.SecondaryColor = dto.SecondaryColor; t.AccentColor = dto.AccentColor;
         t.BackgroundUrl = dto.BackgroundUrl; t.LogoUrl = dto.LogoUrl; t.WatermarkUrl = dto.WatermarkUrl; t.WatermarkText = dto.WatermarkText;
+        t.UseTeamColors = dto.UseTeamColors;
         t.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync();
+        if (id is not null) await PushThemeAsync(t.Id);
         return Result<OverlayThemeDto>.Ok(Map(t));
     }
 

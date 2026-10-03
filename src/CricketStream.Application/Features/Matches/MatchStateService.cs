@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Application.Interfaces;
 using CricketStream.Contracts.Matches;
 using CricketStream.Domain.Entities;
@@ -22,8 +22,12 @@ public class MatchStateService : IMatchStateService {
             .Include(m => m.Innings).ThenInclude(i => i.Overs).ThenInclude(o => o.Balls).ThenInclude(b => b.Dismissal)
             .FirstOrDefaultAsync(m => m.Id == matchId);
         if (match is null) return null;
+        if (match.OverlayTheme is null && match.Tournament.OverlayThemeId is { } tournamentTheme)
+            match.OverlayTheme = await _db.OverlayThemes.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tournamentTheme);
         var graphics = await _db.OverlayGraphicStates.AsNoTracking().Where(g => g.MatchId == matchId).ToListAsync();
-        return MatchStateBuilder.Build(match, graphics);
+        var lastPenalty = await _db.AuditLogs.AsNoTracking()
+            .Where(a => a.MatchId == matchId && a.ActionType == "Penalty").OrderByDescending(a => a.CreatedAt).FirstOrDefaultAsync();
+        return MatchStateBuilder.Build(match, graphics, lastPenalty);
     }
 }
 

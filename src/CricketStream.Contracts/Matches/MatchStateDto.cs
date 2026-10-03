@@ -30,6 +30,9 @@ public class MatchStateDto {
     public LineupsDto Lineups { get; set; } = new();
 
     public LastBallDto? LastBall { get; set; }
+
+    /// <summary>The most recent penalty award (runs added without a ball). The overlay shows a burst for each new one.</summary>
+    public LastPenaltyDto? LastPenalty { get; set; }
     public List<OverTimelineDto> Timeline { get; set; } = new();
 
     public TestClockDto? TestClock { get; set; }
@@ -46,6 +49,7 @@ public class ThemeDto {
     public string? LogoUrl { get; set; }
     public string? WatermarkUrl { get; set; }
     public string? WatermarkText { get; set; }
+    public bool UseTeamColors { get; set; }
 }
 
 public class TeamLiteDto {
@@ -99,6 +103,21 @@ public class BatterDto {
     public int Sixes { get; set; }
     public decimal StrikeRate { get; set; }
     public bool OnStrike { get; set; }
+    // Used by the "new batter" introduction card.
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public int JerseyNumber { get; set; }
+    public string BattingStyle { get; set; } = string.Empty;
+    public BatterCareerDto? Career { get; set; }
+}
+public class BatterCareerDto {
+    public string Label { get; set; } = string.Empty;
+    public int? Matches { get; set; }
+    public int? Runs { get; set; }
+    public decimal? Average { get; set; }
+    public decimal? StrikeRate { get; set; }
+    public int? Fifties { get; set; }
+    public int? Hundreds { get; set; }
 }
 
 public class BowlerDto {
@@ -198,6 +217,7 @@ public class InningsScorecardDto {
     public int Wickets { get; set; }
     public string Overs { get; set; } = "0.0";
     public int Extras { get; set; }
+    public decimal RunRate { get; set; }
     public string ExtrasText { get; set; } = string.Empty; // "(b 4, lb 2, w 5, nb 1)"
     public bool IsCompleted { get; set; }
     public List<BatterLineDto> Batting { get; set; } = new();
@@ -209,6 +229,8 @@ public class InningsScorecardDto {
 public class BatterLineDto {
     public Guid PlayerId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public bool IsCaptain { get; set; }
+    public bool IsWicketKeeper { get; set; }
     public int Runs { get; set; }
     public int Balls { get; set; }
     public int Fours { get; set; }
@@ -256,4 +278,8 @@ public class LineupPlayerDto {
     public bool IsCaptain { get; set; }
     public bool IsWicketKeeper { get; set; }
     public int BattingOrder { get; set; }
+}
+public class LastPenaltyDto {
+    public Guid Id { get; set; }     // changes with every penalty, so clients can tell a NEW one from one they have already shown
+    public int Runs { get; set; }
 }

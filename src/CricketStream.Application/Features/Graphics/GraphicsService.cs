@@ -33,12 +33,19 @@ public class GraphicsService : IGraphicsService {
             if (!hasContent) return Result<MatchStateDto>.Fail(Fail.Validation("A banner needs text or an image."));
         }
         if (canonical == "TeamLineup" && request.IsVisible) {
-            // the overlay needs to know WHICH team's playing XI to roll out
-            var teamId = request.Payload is { ValueKind: System.Text.Json.JsonValueKind.Object } lp && lp.TryGetProperty("teamId", out var tid) && Guid.TryParse(tid.GetString(), out var parsed) ? parsed : (Guid?)null;
-            if (teamId is null || (teamId != match.HomeTeamId && teamId != match.AwayTeamId))
-                return Result<MatchStateDto>.Fail(Fail.Validation("Pick which team's playing XI to show (payload.teamId must be one of the two teams)."));
-            var xi = await _db.MatchPlayers.CountAsync(mp => mp.MatchId == matchId && mp.TeamId == teamId && mp.IsPlayingXI);
-            if (xi == 0) return Result<MatchStateDto>.Fail(Fail.Unprocessable("That team has no playing XI yet. Set the squads first."));
+            // the overlay needs to know WHICH team's playing XI to roll out: one of the two teams, or "both" side by side
+            var raw = request.Payload is { ValueKind: System.Text.Json.JsonValueKind.Object } lp && lp.TryGetProperty("teamId", out var tid) ? tid.GetString() : null;
+            if (string.Equals(raw, "both", StringComparison.OrdinalIgnoreCase)) {
+                foreach (var team in new[] { match.HomeTeamId, match.AwayTeamId })
+                    if (await _db.MatchPlayers.CountAsync(mp => mp.MatchId == matchId && mp.TeamId == team && mp.IsPlayingXI) == 0)
+                        return Result<MatchStateDto>.Fail(Fail.Unprocessable("Both teams need a playing XI to show them together. Set the squads first."));
+            } else {
+                var teamId = Guid.TryParse(raw, out var parsed) ? parsed : (Guid?)null;
+                if (teamId is null || (teamId != match.HomeTeamId && teamId != match.AwayTeamId))
+                    return Result<MatchStateDto>.Fail(Fail.Validation("Pick which team's playing XI to show (payload.teamId must be one of the two teams, or \"both\")."));
+                var xi = await _db.MatchPlayers.CountAsync(mp => mp.MatchId == matchId && mp.TeamId == teamId && mp.IsPlayingXI);
+                if (xi == 0) return Result<MatchStateDto>.Fail(Fail.Unprocessable("That team has no playing XI yet. Set the squads first."));
+            }
         }
 
         var row = await _db.OverlayGraphicStates.FirstOrDefaultAsync(g => g.MatchId == matchId && g.GraphicKey == canonical);

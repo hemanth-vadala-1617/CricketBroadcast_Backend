@@ -1,4 +1,4 @@
-﻿namespace CricketStream.Contracts.Master;
+namespace CricketStream.Contracts.Master;
 
 public class VenueDto {
     public Guid Id { get; set; }
@@ -54,4 +54,5 @@ public class OverlayThemeDto {
     public string? LogoUrl { get; set; }
     public string? WatermarkUrl { get; set; }
     public string? WatermarkText { get; set; }
+    public bool UseTeamColors { get; set; }
 }

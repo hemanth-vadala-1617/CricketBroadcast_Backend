@@ -80,6 +80,20 @@ public static class MatchStateBuilder
         };
     }
 
+    // The audit entry of a penalty stores the innings' penalty total before and after; the difference is what was awarded.
+    // A correction (negative) or an unreadable entry shows nothing.
+    private static LastPenaltyDto? ParsePenalty(AuditLog? log)
+    {
+        if (log is null || string.IsNullOrWhiteSpace(log.AfterStateJson)) return null;
+        try
+        {
+            static int Total(string json) => System.Text.Json.JsonDocument.Parse(json).RootElement.GetProperty("penaltyRuns").GetInt32();
+            var awarded = Total(log.AfterStateJson) - Total(log.PreviousStateJson);
+            return awarded > 0 ? new LastPenaltyDto { Id = log.Id, Runs = awarded } : null;
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException or FormatException) { return null; }
+    }
+
     public static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };
 
     public static string DismissalText(Dismissal d, Ball b, Func<Guid, string> name)
@@ -219,7 +233,7 @@ public static class MatchStateBuilder
         return c;
     }
 
-    public static MatchStateDto Build(Match m, IEnumerable<OverlayGraphicState> graphics)
+    public static MatchStateDto Build(Match m, IEnumerable<OverlayGraphicState> graphics, AuditLog? lastPenalty = null)
     {
         var rules = m.MatchRules;
         var bpo = rules.BallsPerOver;
@@ -258,7 +272,7 @@ public static class MatchStateBuilder
             dto.Theme = new ThemeDto
             {
                 PrimaryColor = th.PrimaryColor, SecondaryColor = th.SecondaryColor, AccentColor = th.AccentColor,
-                LogoUrl = th.LogoUrl, WatermarkUrl = th.WatermarkUrl, WatermarkText = th.WatermarkText,
+                LogoUrl = th.LogoUrl, WatermarkUrl = th.WatermarkUrl, WatermarkText = th.WatermarkText, UseTeamColors = th.UseTeamColors,
             };
         if (m.TossWinnerTeamId is { } tw && m.TossDecision is { } td)
         {
@@ -275,6 +289,7 @@ public static class MatchStateBuilder
             {
                 InningsNumber = i.InningsNumber, BattingTeam = TeamLite(team), Runs = c.Runs, Wickets = c.Wickets,
                 Overs = CricketRules.FormatOvers(c.LegalBalls, bpo), Extras = c.Extras, ExtrasText = c.ExtrasText,
+                RunRate = CricketRules.RunRate(c.Runs, c.LegalBalls, bpo),
                 IsCompleted = i.Status == InningsStatus.Completed, FallOfWickets = c.Fow,
             };
             foreach (var id in c.BatOrder)
@@ -283,7 +298,8 @@ public static class MatchStateBuilder
                 var atCrease = id == i.CurrentStrikerId || id == i.CurrentNonStrikerId;
                 card.Batting.Add(new BatterLineDto
                 {
-                    PlayerId = id, Name = Name(id), Runs = a.Runs, Balls = a.Balls, Fours = a.Fours, Sixes = a.Sixes,
+                    PlayerId = id, Name = Name(id), IsCaptain = roster.TryGetValue(id, out var rp) && rp.IsCaptain, IsWicketKeeper = rp is not null && rp.IsWicketKeeper,
+                    Runs = a.Runs, Balls = a.Balls, Fours = a.Fours, Sixes = a.Sixes,
                     StrikeRate = CricketRules.StrikeRate(a.Runs, a.Balls),
                     Status = a.Out is not null ? "out" : atCrease && i.Status == InningsStatus.InProgress ? "batting"
                            : i.Status == InningsStatus.Completed ? "not out" : "retired hurt",
@@ -366,8 +382,16 @@ public static class MatchStateBuilder
             {
                 if (id is not { } pid) return null;
                 var a = c.Bat.GetValueOrDefault(pid) ?? new BatAcc();
+                var pl = roster.TryGetValue(pid, out var rmp) ? rmp.Player : null;
+                var hasCareer = pl is not null && (pl.CareerMatches is not null || pl.CareerRuns is not null || pl.CareerAverage is not null
+                    || pl.CareerStrikeRate is not null || pl.CareerFifties is not null || pl.CareerHundreds is not null);
                 return new BatterDto
                 {
+                    FirstName = pl?.FirstName ?? "", LastName = pl?.LastName ?? "", JerseyNumber = pl?.JerseyNumber ?? 0, BattingStyle = pl?.BattingStyle ?? "",
+                    Career = hasCareer ? new BatterCareerDto {
+                        Label = pl!.CareerLabel, Matches = pl.CareerMatches, Runs = pl.CareerRuns, Average = pl.CareerAverage,
+                        StrikeRate = pl.CareerStrikeRate, Fifties = pl.CareerFifties, Hundreds = pl.CareerHundreds,
+                    } : null,
                     PlayerId = pid, Name = Name(pid), ShortName = Short(pid), PhotoUrl = Photo(pid), Runs = a.Runs,
                     Balls = a.Balls, Fours = a.Fours, Sixes = a.Sixes, StrikeRate = CricketRules.StrikeRate(a.Runs, a.Balls),
                     OnStrike = onStrike,
@@ -418,6 +442,7 @@ public static class MatchStateBuilder
             };
         }
 
+        dto.LastPenalty = ParsePenalty(lastPenalty);
         dto.Lineups = new LineupsDto { Home = BuildLineup(m, m.HomeTeam), Away = BuildLineup(m, m.AwayTeam) };
         dto.WinProbability = new WinProbabilityDto { Home = m.WinProbHome, Draw = m.WinProbDraw, Away = m.WinProbAway };
 

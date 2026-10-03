@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CricketStream.Contracts.Graphics;
 using CricketStream.Contracts.Matches;
 using Xunit;
@@ -250,6 +250,92 @@ public class SetupAndGraphicsTests
         Assert.False(s.Graphics["TeamLineup"].IsVisible);
     }
 
+    private static CricketStream.Contracts.Master.OverlayThemeDto Theme(string primary, bool teamColours = false) => new()
+    {
+        Name = "Test theme " + Guid.NewGuid().ToString("N")[..6], PrimaryColor = primary, SecondaryColor = "#7a1fa2", AccentColor = "#ffd400", UseTeamColors = teamColours,
+    };
+
+    [Fact]
+    public async Task Editing_a_theme_pushes_the_new_colours_to_the_overlay_already_on_air()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var theme = (await f.MasterData.SaveThemeAsync(null, Theme("#0f6b4f"))).Value!;
+        var match = await f.Db.Matches.FindAsync(f.MatchId);
+        match!.OverlayThemeId = theme.Id;
+        await f.Db.SaveChangesAsync();
+        var versionBefore = (await f.Matches.GetStateAsync(f.MatchId))!.Version;
+        var sentBefore = f.Broadcaster.Sent.Count;
+
+        var edited = Theme("#112233"); edited.Name = theme.Name;
+        Assert.True((await f.MasterData.SaveThemeAsync(theme.Id, edited)).Succeeded);
+
+        Assert.True(f.Broadcaster.Sent.Count > sentBefore, "the open overlay was never told about the edit");
+        var pushed = f.Broadcaster.Sent.Last();
+        Assert.Equal("#112233", pushed.Theme.PrimaryColor);
+        Assert.True(pushed.Version > versionBefore);                         // clients ignore versions that are not newer
+        Assert.Equal("#112233", (await f.Matches.GetStateAsync(f.MatchId))!.Theme.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task Creating_a_theme_does_not_broadcast_to_matches_that_do_not_use_it()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var sentBefore = f.Broadcaster.Sent.Count;
+        Assert.True((await f.MasterData.SaveThemeAsync(null, Theme("#445566"))).Succeeded);
+        Assert.Equal(sentBefore, f.Broadcaster.Sent.Count);
+    }
+
+    [Fact]
+    public async Task The_use_team_colours_option_reaches_the_overlay_state()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var theme = (await f.MasterData.SaveThemeAsync(null, Theme("#0f6b4f", teamColours: true))).Value!;
+        Assert.True(theme.UseTeamColors);
+        (await f.Db.Matches.FindAsync(f.MatchId))!.OverlayThemeId = theme.Id;
+        await f.Db.SaveChangesAsync();
+        Assert.True((await f.Matches.GetStateAsync(f.MatchId))!.Theme.UseTeamColors);
+
+        var off = Theme("#0f6b4f", teamColours: false); off.Name = theme.Name;
+        await f.MasterData.SaveThemeAsync(theme.Id, off);
+        Assert.False((await f.Matches.GetStateAsync(f.MatchId))!.Theme.UseTeamColors);
+    }
+
+    [Fact]
+    public async Task A_match_without_its_own_theme_uses_its_tournaments_theme()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        Assert.Equal("#0f6b4f", (await f.Matches.GetStateAsync(f.MatchId))!.Theme.PrimaryColor);   // built-in default while neither has one
+        var theme = (await f.MasterData.SaveThemeAsync(null, Theme("#abcdef"))).Value!;
+        f.Db.Tournaments.First().OverlayThemeId = theme.Id;
+        await f.Db.SaveChangesAsync();
+        Assert.Equal("#abcdef", (await f.Matches.GetStateAsync(f.MatchId))!.Theme.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task Both_teams_playing_xis_can_be_shown_together_but_only_when_both_have_one()
+    {
+        using var f = await MatchFixture.CreateAsync(startInnings: false);
+        var both = JsonDocument.Parse("{\"teamId\":\"both\"}").RootElement;
+        var s = f.Ok(await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = both }));
+        Assert.True(s.Graphics["TeamLineup"].IsVisible);
+        Assert.Equal("both", s.Graphics["TeamLineup"].Payload!.Value.GetProperty("teamId").GetString());
+
+        // a match where only India has picked its XI cannot show both
+        var second = await CreateSecondMatch(f);
+        Assert.True((await f.Matches.SetSquadAsync(second, new SetSquadRequest
+        {
+            TeamId = f.India.Id, Players = f.IndiaXI.Select((p, i) => new SquadPlayerRequest { PlayerId = p.Id, IsPlayingXI = true, BattingOrder = i + 1 }).ToList(),
+        })).Succeeded);
+        var refused = await f.Graphics.SetAsync(second, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = both });
+        Assert.False(refused.Succeeded);
+        Assert.Equal(Application.Common.ErrorKind.Unprocessable, refused.Error!.Kind);
+
+        // a single team is still fine there, and junk is still rejected
+        var india = JsonDocument.Parse($"{{\"teamId\":\"{f.India.Id}\"}}").RootElement;
+        Assert.True((await f.Graphics.SetAsync(second, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = india })).Succeeded);
+        var junk = JsonDocument.Parse("{\"teamId\":\"everyone\"}").RootElement;
+        Assert.False((await f.Graphics.SetAsync(second, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = junk })).Succeeded);
+    }
     [Fact]
     public async Task Match_state_exposes_what_the_scorer_may_do_next()
     {

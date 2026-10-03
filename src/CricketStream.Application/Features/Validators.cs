@@ -1,4 +1,4 @@
-﻿using CricketStream.Contracts.Graphics;
+using CricketStream.Contracts.Graphics;
 using CricketStream.Contracts.Master;
 using CricketStream.Contracts.Matches;
 using CricketStream.Contracts.Players;
@@ -65,6 +65,11 @@ public class SetSquadRequestValidator : AbstractValidator<SetSquadRequest> {
         RuleFor(x => x.Players).Must(p => p.Count <= 25).WithMessage("A squad has at most 25 players.");
         RuleFor(x => x.Players).Must(p => p.Count(i => i.IsCaptain) <= 1).WithMessage("Only one captain.");
         RuleFor(x => x.Players).Must(p => p.Count(i => i.IsWicketKeeper) <= 1).WithMessage("Only one wicket-keeper.");
+        RuleFor(x => x.Staff).Must(s => s.Count <= 15).WithMessage("At most 15 support staff per team.");
+        RuleForEach(x => x.Staff).ChildRules(s => {
+            s.RuleFor(i => i.Name).NotEmpty().WithMessage("Each support staff member needs a name.").MaximumLength(100);
+            s.RuleFor(i => i.Role).NotEmpty().WithMessage("Each support staff member needs a role.").MaximumLength(60);
+        });
     }
 }
 public class WinProbabilityRequestValidator : AbstractValidator<WinProbabilityRequest> {
@@ -89,6 +94,10 @@ public class PlayerDtoValidator : AbstractValidator<PlayerDto> {
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.ShortName).NotEmpty().MaximumLength(20);
         RuleFor(x => x.PlayerRole).Must(r => Enum.TryParse<PlayerRole>(r, true, out _)).WithMessage("Unknown player role.");
+        RuleFor(x => x.CareerLabel).MaximumLength(20);
+        RuleFor(x => x.CareerMatches).GreaterThanOrEqualTo(0); RuleFor(x => x.CareerRuns).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CareerFifties).GreaterThanOrEqualTo(0); RuleFor(x => x.CareerHundreds).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CareerAverage).InclusiveBetween(0m, 1000m); RuleFor(x => x.CareerStrikeRate).InclusiveBetween(0m, 1000m);
     }
 }
 public class VenueDtoValidator : AbstractValidator<VenueDto> {

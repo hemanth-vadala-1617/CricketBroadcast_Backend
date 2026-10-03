@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Interfaces;
+using CricketStream.Application.Interfaces;
 using CricketStream.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -18,6 +18,7 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
+    public DbSet<MatchStaff> MatchStaff => Set<MatchStaff>();
     public DbSet<Innings> Innings => Set<Innings>();
     public DbSet<Over> Overs => Set<Over>();
     public DbSet<Ball> Balls => Set<Ball>();
@@ -80,6 +81,14 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
             e.HasOne(mp => mp.Team).WithMany().HasForeignKey(mp => mp.TeamId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(mp => mp.Player).WithMany().HasForeignKey(mp => mp.PlayerId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(mp => new { mp.MatchId, mp.PlayerId }).IsUnique();
+        });
+
+        b.Entity<MatchStaff>(e => {
+            e.HasOne(s => s.Match).WithMany(m => m.MatchStaff).HasForeignKey(s => s.MatchId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Team).WithMany().HasForeignKey(s => s.TeamId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(s => s.Name).HasMaxLength(100);
+            e.Property(s => s.Role).HasMaxLength(60);
+            e.HasIndex(s => new { s.MatchId, s.TeamId });
         });
 
         // ---- scoring ----

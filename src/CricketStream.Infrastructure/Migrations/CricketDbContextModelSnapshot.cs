@@ -687,6 +687,57 @@ namespace CricketStream.Infrastructure.Migrations
                     b.ToTable("match_rules", (string)null);
                 });
 
+            modelBuilder.Entity("CricketStream.Domain.Entities.MatchStaff", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("match_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("role");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("team_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_match_staff");
+
+                    b.HasIndex("TeamId")
+                        .HasDatabaseName("ix_match_staff_team_id");
+
+                    b.HasIndex("MatchId", "TeamId")
+                        .HasDatabaseName("ix_match_staff_match_id_team_id");
+
+                    b.ToTable("match_staff", (string)null);
+                });
+
             modelBuilder.Entity("CricketStream.Domain.Entities.Over", b =>
                 {
                     b.Property<Guid>("Id")
@@ -817,6 +868,10 @@ namespace CricketStream.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<bool>("UseTeamColors")
+                        .HasColumnType("boolean")
+                        .HasColumnName("use_team_colors");
+
                     b.Property<string>("WatermarkText")
                         .HasColumnType("text")
                         .HasColumnName("watermark_text");
@@ -847,6 +902,35 @@ namespace CricketStream.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("bowling_style");
+
+                    b.Property<decimal?>("CareerAverage")
+                        .HasColumnType("numeric")
+                        .HasColumnName("career_average");
+
+                    b.Property<int?>("CareerFifties")
+                        .HasColumnType("integer")
+                        .HasColumnName("career_fifties");
+
+                    b.Property<int?>("CareerHundreds")
+                        .HasColumnType("integer")
+                        .HasColumnName("career_hundreds");
+
+                    b.Property<string>("CareerLabel")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("career_label");
+
+                    b.Property<int?>("CareerMatches")
+                        .HasColumnType("integer")
+                        .HasColumnName("career_matches");
+
+                    b.Property<int?>("CareerRuns")
+                        .HasColumnType("integer")
+                        .HasColumnName("career_runs");
+
+                    b.Property<decimal?>("CareerStrikeRate")
+                        .HasColumnType("numeric")
+                        .HasColumnName("career_strike_rate");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1599,6 +1683,27 @@ namespace CricketStream.Infrastructure.Migrations
                     b.Navigation("Team");
                 });
 
+            modelBuilder.Entity("CricketStream.Domain.Entities.MatchStaff", b =>
+                {
+                    b.HasOne("CricketStream.Domain.Entities.Match", "Match")
+                        .WithMany("MatchStaff")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_match_staff_matches_match_id");
+
+                    b.HasOne("CricketStream.Domain.Entities.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_match_staff_teams_team_id");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Team");
+                });
+
             modelBuilder.Entity("CricketStream.Domain.Entities.Over", b =>
                 {
                     b.HasOne("CricketStream.Domain.Entities.Player", "Bowler")
@@ -1730,6 +1835,8 @@ namespace CricketStream.Infrastructure.Migrations
                     b.Navigation("Innings");
 
                     b.Navigation("MatchPlayers");
+
+                    b.Navigation("MatchStaff");
                 });
 
             modelBuilder.Entity("CricketStream.Domain.Entities.Over", b =>

@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Application.Features.Scoring;
 using CricketStream.Application.Interfaces;
 using CricketStream.Contracts.Matches;
@@ -113,6 +113,7 @@ public class MatchService : IMatchService {
         if (match.HomeTeamId != request.HomeTeamId || match.AwayTeamId != request.AwayTeamId) {
             var old = await _db.MatchPlayers.Where(p => p.MatchId == id).ToListAsync();
             _db.MatchPlayers.RemoveRange(old); // squads belonged to the old teams
+            _db.MatchStaff.RemoveRange(await _db.MatchStaff.Where(s => s.MatchId == id).ToListAsync());
         }
         match.TournamentId = request.TournamentId; match.HomeTeamId = request.HomeTeamId; match.AwayTeamId = request.AwayTeamId;
         match.VenueId = request.VenueId; match.MatchRulesId = request.MatchRulesId; match.OverlayThemeId = request.OverlayThemeId;
@@ -138,15 +139,16 @@ public class MatchService : IMatchService {
 
     // ---------------- squads ----------------
     public async Task<Result<List<SquadDto>>> GetSquadsAsync(Guid id) {
-        var match = await _db.Matches.AsNoTracking().Include(m => m.MatchPlayers).ThenInclude(p => p.Player).FirstOrDefaultAsync(m => m.Id == id);
+        var match = await _db.Matches.AsNoTracking().Include(m => m.MatchPlayers).ThenInclude(p => p.Player).Include(m => m.MatchStaff).FirstOrDefaultAsync(m => m.Id == id);
         if (match is null) return Result<List<SquadDto>>.Fail(Fail.NotFound("Match not found."));
         SquadDto Squad(Guid team) => new() {
             TeamId = team,
             Players = match.MatchPlayers.Where(p => p.TeamId == team).OrderBy(p => p.IsPlayingXI ? 0 : 1).ThenBy(p => p.BattingOrder)
                 .Select(p => new SquadMemberDto {
-                    PlayerId = p.PlayerId, Name = p.Player.DisplayName, PhotoUrl = p.Player.PhotoUrl, IsPlayingXI = p.IsPlayingXI,
+                    PlayerId = p.PlayerId, Name = p.Player.DisplayName, PhotoUrl = p.Player.PhotoUrl, Role = p.Player.PlayerRole.ToString(), IsPlayingXI = p.IsPlayingXI,
                     IsCaptain = p.IsCaptain, IsWicketKeeper = p.IsWicketKeeper, BattingOrder = p.BattingOrder,
                 }).ToList(),
+            Staff = match.MatchStaff.Where(s => s.TeamId == team).OrderBy(s => s.SortOrder).Select(s => new SquadStaffRequest { Name = s.Name, Role = s.Role }).ToList(),
         };
         return Result<List<SquadDto>>.Ok(new() { Squad(match.HomeTeamId), Squad(match.AwayTeamId) });
     }
@@ -154,7 +156,7 @@ public class MatchService : IMatchService {
     public async Task<Result<MatchStateDto>> SetSquadAsync(Guid id, SetSquadRequest request) {
         var bad = await _squadValidator.FirstErrorAsync(request);
         if (bad is not null) return Fail_(ErrorKind.Validation, bad);
-        var match = await _db.Matches.Include(m => m.MatchPlayers).FirstOrDefaultAsync(m => m.Id == id);
+        var match = await _db.Matches.Include(m => m.MatchPlayers).Include(m => m.MatchStaff).FirstOrDefaultAsync(m => m.Id == id);
         if (match is null) return NotFound();
         if (match.Status is not (MatchStatus.Scheduled or MatchStatus.TossCompleted))
             return Fail_(ErrorKind.Unprocessable, "The squad is locked once the match has started.");
@@ -175,6 +177,10 @@ public class MatchService : IMatchService {
                 IsSubstitute = !p.IsPlayingXI, IsCaptain = p.IsCaptain, IsWicketKeeper = p.IsWicketKeeper,
                 BattingOrder = p.IsPlayingXI ? (p.BattingOrder > 0 ? p.BattingOrder : order++) : 0,
             });
+        _db.MatchStaff.RemoveRange(match.MatchStaff.Where(s => s.TeamId == request.TeamId).ToList());
+        var staffOrder = 0;
+        foreach (var s in request.Staff)
+            _db.MatchStaff.Add(new MatchStaff { MatchId = id, TeamId = request.TeamId, Name = s.Name.Trim(), Role = s.Role.Trim(), SortOrder = staffOrder++ });
         return await _committer.CommitAsync(match);
     }
 

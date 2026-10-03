@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Common;
+using CricketStream.Domain.Common;
 using CricketStream.Domain.Enums;
 namespace CricketStream.Domain.Entities;
 /// <summary>A player is not owned by one team forever (IPL trades, World Cup squads).
@@ -16,4 +16,12 @@ public class Player : BaseEntity {
     public string BowlingStyle { get; set; } = string.Empty;
     public PlayerRole PlayerRole { get; set; }
     public bool IsActive { get; set; } = true;
+    // Optional career batting figures, shown on the "new batter" graphic when entered.
+    public string CareerLabel { get; set; } = string.Empty;   // e.g. "T20I", "IPL"
+    public int? CareerMatches { get; set; }
+    public int? CareerRuns { get; set; }
+    public decimal? CareerAverage { get; set; }
+    public decimal? CareerStrikeRate { get; set; }
+    public int? CareerFifties { get; set; }
+    public int? CareerHundreds { get; set; }
 }

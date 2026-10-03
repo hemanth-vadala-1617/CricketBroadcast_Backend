@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Entities;
+using CricketStream.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 namespace CricketStream.Application.Interfaces;
 public interface ICricketDbContext {
@@ -11,6 +11,7 @@ public interface ICricketDbContext {
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<Match> Matches { get; }
     DbSet<MatchPlayer> MatchPlayers { get; }
+    DbSet<MatchStaff> MatchStaff { get; }
     DbSet<Innings> Innings { get; }
     DbSet<Over> Overs { get; }
     DbSet<Ball> Balls { get; }

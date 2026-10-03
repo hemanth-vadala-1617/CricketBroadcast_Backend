@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Contracts.Matches;
 using CricketStream.Contracts.Scoring;
 using CricketStream.Domain.Entities;
@@ -45,6 +45,20 @@ public class ScoringTests
         Assert.Equal(new[] { "1", "4", "WD", "NB", "2", "3", "LB1", "1" }, timeline.Balls.Select(x => x.Label));
         Assert.Equal(14, timeline.Runs);
         Assert.True(timeline.IsCompleted);
+    }
+
+    [Fact]
+    public async Task The_scorecard_carries_the_run_rate_and_marks_the_captain_and_keeper()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Ball(1);                       // I1 (captain) takes a single
+        await f.Ball(4, boundary: true);       // I2 hits a four; two legal balls, 5 runs
+        var card = f.Last.Scorecard.Single();
+        Assert.Equal(15m, card.RunRate);        // 5 runs off 2 balls = 15.00 an over
+        var captain = card.Batting.Single(b => b.PlayerId == f.IndiaXI[0].Id);
+        Assert.True(captain.IsCaptain);
+        Assert.False(captain.IsWicketKeeper);
+        Assert.False(card.Batting.Single(b => b.PlayerId == f.IndiaXI[1].Id).IsCaptain);
     }
 
     [Fact]
@@ -310,6 +324,33 @@ public class ScoringTests
     }
 
     // ---------- retire / penalty / swap ----------
+    [Fact]
+    public async Task A_penalty_is_announced_with_a_new_id_each_time_so_the_overlay_can_show_it()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        Assert.Null(f.Last.LastPenalty);                                   // nothing yet
+
+        var s = f.Ok(await f.Scoring.PenaltyAsync(f.MatchId, new PenaltyRequest { Runs = 5, Reason = "ball tampering" }, MatchFixture.User));
+        Assert.Equal(5, s.LastPenalty!.Runs);
+        var first = s.LastPenalty.Id;
+
+        await f.Ball(1);                                                   // a ball afterwards does not change or clear it
+        Assert.Equal(first, (await f.Matches.GetStateAsync(f.MatchId))!.LastPenalty!.Id);
+
+        s = f.Ok(await f.Scoring.PenaltyAsync(f.MatchId, new PenaltyRequest { Runs = 5, Reason = "again" }, MatchFixture.User));
+        Assert.Equal(5, s.LastPenalty!.Runs);                              // the amount awarded this time, not the running total (10)
+        Assert.NotEqual(first, s.LastPenalty.Id);                          // a NEW award, so clients show it again
+    }
+
+    [Fact]
+    public async Task A_penalty_correction_shows_nothing()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        f.Ok(await f.Scoring.PenaltyAsync(f.MatchId, new PenaltyRequest { Runs = 5 }, MatchFixture.User));
+        var s = f.Ok(await f.Scoring.PenaltyAsync(f.MatchId, new PenaltyRequest { Runs = -5, Reason = "entered by mistake" }, MatchFixture.User));
+        Assert.Null(s.LastPenalty);                                        // taking runs back must not flash a celebration
+        Assert.Equal(0, s.Innings!.Extras);
+    }
     [Fact]
     public async Task Swap_strike_retire_and_penalty_work_and_are_audited()
     {

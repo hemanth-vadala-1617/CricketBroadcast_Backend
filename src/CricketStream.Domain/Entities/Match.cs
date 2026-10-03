@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Common;
+using CricketStream.Domain.Common;
 using CricketStream.Domain.Enums;
 namespace CricketStream.Domain.Entities;
 public class Match : BaseEntity {
@@ -45,5 +45,6 @@ public class Match : BaseEntity {
     public Team? WinnerTeam { get; set; }
 
     public ICollection<MatchPlayer> MatchPlayers { get; set; } = new List<MatchPlayer>();
+    public ICollection<MatchStaff> MatchStaff { get; set; } = new List<MatchStaff>();
     public ICollection<Innings> Innings { get; set; } = new List<Innings>();
 }
