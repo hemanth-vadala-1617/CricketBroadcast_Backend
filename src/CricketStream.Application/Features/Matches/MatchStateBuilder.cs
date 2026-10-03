@@ -13,12 +13,12 @@ namespace CricketStream.Application.Features.Matches;
 public static class MatchStateBuilder
 {
     public static readonly string[] GraphicKeys =
-        { "Scorebug", "BatterCards", "BowlerCard", "Timeline", "WinProbability", "FullScorecard", "Banner" };
+        { "Scorebug", "BatterCards", "BowlerCard", "Timeline", "WinProbability", "FullScorecard", "Banner", "TeamLineup" };
 
     private static readonly Dictionary<string, bool> GraphicDefaults = new()
     {
         ["Scorebug"] = true, ["BatterCards"] = true, ["BowlerCard"] = true, ["Timeline"] = true,
-        ["WinProbability"] = false, ["FullScorecard"] = false, ["Banner"] = false,
+        ["WinProbability"] = false, ["FullScorecard"] = false, ["Banner"] = false, ["TeamLineup"] = false,
     };
 
     // ---------- per-innings working data ----------
@@ -50,6 +50,34 @@ public static class MatchStateBuilder
         }
         var last = ordered[^1].BattingTeamId;
         return last == m.HomeTeamId ? m.AwayTeamId : m.HomeTeamId;
+    }
+
+    /// <summary>Playing XI in batting order. Names come from First/Last name, else the display name is split.</summary>
+    private static LineupDto BuildLineup(Match m, Team team)
+    {
+        var players = m.MatchPlayers.Where(p => p.TeamId == team.Id && p.IsPlayingXI)
+            .OrderBy(p => p.BattingOrder).ThenBy(p => p.Player.DisplayName)
+            .Select(p =>
+            {
+                var first = p.Player.FirstName?.Trim() ?? "";
+                var last = p.Player.LastName?.Trim() ?? "";
+                if (first.Length == 0 && last.Length == 0)
+                {
+                    var parts = p.Player.DisplayName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    first = parts.Length > 1 ? parts[0] : "";
+                    last = parts.Length > 1 ? parts[1] : parts.FirstOrDefault() ?? "";
+                }
+                return new LineupPlayerDto
+                {
+                    PlayerId = p.PlayerId, FirstName = first, LastName = last, DisplayName = p.Player.DisplayName,
+                    PhotoUrl = p.Player.PhotoUrl, IsCaptain = p.IsCaptain, IsWicketKeeper = p.IsWicketKeeper, BattingOrder = p.BattingOrder,
+                };
+            }).ToList();
+        return new LineupDto
+        {
+            Players = players,
+            Team = new TeamLiteDto { Id = team.Id, Name = team.Name, ShortName = team.ShortName, LogoUrl = team.LogoUrl, PrimaryColor = team.PrimaryColor, SecondaryColor = team.SecondaryColor },
+        };
     }
 
     public static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };
@@ -390,6 +418,7 @@ public static class MatchStateBuilder
             };
         }
 
+        dto.Lineups = new LineupsDto { Home = BuildLineup(m, m.HomeTeam), Away = BuildLineup(m, m.AwayTeam) };
         dto.WinProbability = new WinProbabilityDto { Home = m.WinProbHome, Draw = m.WinProbDraw, Away = m.WinProbAway };
 
         // ---- graphics ----

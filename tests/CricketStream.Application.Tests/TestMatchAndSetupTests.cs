@@ -214,6 +214,43 @@ public class SetupAndGraphicsTests
     }
 
     [Fact]
+    public async Task Both_playing_xis_are_in_the_state_in_batting_order_with_split_names_and_roles()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var l = f.Last.Lineups;
+        Assert.Equal(f.India.Id, l.Home.Team.Id);
+        Assert.Equal(f.Australia.Id, l.Away.Team.Id);
+        Assert.Equal(11, l.Home.Players.Count);
+        Assert.Equal(Enumerable.Range(1, 11), l.Home.Players.Select(p => p.BattingOrder));
+        var first = l.Home.Players[0];
+        Assert.Equal(("Ind", "1"), (first.FirstName, first.LastName));       // "Ind 1" has no first/last name stored: split from DisplayName
+        Assert.True(first.IsCaptain);
+        Assert.True(l.Home.Players[4].IsWicketKeeper);
+        Assert.Equal(1, l.Home.Players.Count(p => p.IsWicketKeeper));
+    }
+
+    [Fact]
+    public async Task The_team_lineup_graphic_needs_one_of_the_two_teams_and_a_playing_xi()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        Assert.False(f.Last.Graphics["TeamLineup"].IsVisible);
+
+        Assert.False((await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = true })).Succeeded);               // no team
+        var stranger = JsonDocument.Parse($"{{\"teamId\":\"{Guid.NewGuid()}\"}}").RootElement;
+        Assert.False((await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = stranger })).Succeeded); // not playing
+        var junk = JsonDocument.Parse("{\"teamId\":\"nope\"}").RootElement;
+        Assert.False((await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = junk })).Succeeded);
+
+        var ind = JsonDocument.Parse($"{{\"teamId\":\"{f.India.Id}\"}}").RootElement;
+        var s = f.Ok(await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = true, Payload = ind }));
+        Assert.True(s.Graphics["TeamLineup"].IsVisible);
+        Assert.Equal(f.India.Id.ToString(), s.Graphics["TeamLineup"].Payload!.Value.GetProperty("teamId").GetString());
+
+        s = f.Ok(await f.Graphics.SetAsync(f.MatchId, "TeamLineup", new SetGraphicRequest { IsVisible = false }));    // hiding needs no payload
+        Assert.False(s.Graphics["TeamLineup"].IsVisible);
+    }
+
+    [Fact]
     public async Task Match_state_exposes_what_the_scorer_may_do_next()
     {
         using var f = await MatchFixture.CreateAsync();

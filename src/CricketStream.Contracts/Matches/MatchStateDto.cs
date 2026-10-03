@@ -26,6 +26,9 @@ public class MatchStateDto {
     public List<InningsSummaryDto> PreviousInnings { get; set; } = new();
     public List<InningsScorecardDto> Scorecard { get; set; } = new();
 
+    /// <summary>Playing XI of both teams, for the pre-match player-intro graphic.</summary>
+    public LineupsDto Lineups { get; set; } = new();
+
     public LastBallDto? LastBall { get; set; }
     public List<OverTimelineDto> Timeline { get; set; } = new();
 
@@ -232,4 +235,25 @@ public class FallOfWicketDto {
     public int Score { get; set; }
     public string Overs { get; set; } = string.Empty;
     public string BatterName { get; set; } = string.Empty;
+}
+
+public class LineupsDto {
+    public LineupDto Home { get; set; } = new();
+    public LineupDto Away { get; set; } = new();
+}
+
+public class LineupDto {
+    public TeamLiteDto Team { get; set; } = new();
+    public List<LineupPlayerDto> Players { get; set; } = new();
+}
+
+public class LineupPlayerDto {
+    public Guid PlayerId { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string? PhotoUrl { get; set; }
+    public bool IsCaptain { get; set; }
+    public bool IsWicketKeeper { get; set; }
+    public int BattingOrder { get; set; }
 }
