@@ -214,20 +214,33 @@ public class MatchService : IMatchService {
         var match = await Full().FirstOrDefaultAsync(m => m.Id == id);
         if (match is null) return NotFound();
         var rules = match.MatchRules;
-        if (match.Status is not (MatchStatus.Live or MatchStatus.InningsBreak)) return Fail_(ErrorKind.Unprocessable, "Start the match first.");
-
         var all = match.Innings.OrderBy(i => i.InningsNumber).ToList();
         var last = all.LastOrDefault();
+        var mainCount = Math.Max(1, rules.InningsPerSide) * 2;
+
+        // A Super Over: a tied limited-overs match gets one-over innings in pairs (the side that batted second bats first) until one side wins.
+        var tied = match.Status == MatchStatus.Completed && match.ResultType == MatchResultType.Tie;
+        var superInnings = all.Count(i => i.IsSuperOver);
+        var superOver = request.SuperOver || (last is { IsSuperOver: true } && superInnings % 2 == 1);
+        if (superOver) {
+            if (rules.IsTest) return Fail_(ErrorKind.Unprocessable, "A Test match has no Super Over.");
+            if (all.Count < mainCount) return Fail_(ErrorKind.Unprocessable, "A Super Over can only be played after the match is tied.");
+            if (superInnings % 2 == 0 && !tied) return Fail_(ErrorKind.Unprocessable, "A Super Over can only be played when the match is tied.");
+        }
+        if (match.Status is not (MatchStatus.Live or MatchStatus.InningsBreak) && !(superOver && tied))
+            return Fail_(ErrorKind.Unprocessable, "Start the match first.");
+
         if (last is not null && last.Status != InningsStatus.Completed) return Fail_(ErrorKind.Unprocessable, "The current innings is still in progress.");
-        if (all.Count >= Math.Max(1, rules.InningsPerSide) * 2) return Fail_(ErrorKind.Unprocessable, "All innings have been played. Complete the match.");
+        if (!superOver && all.Count >= mainCount) return Fail_(ErrorKind.Unprocessable, "All innings have been played. Complete the match.");
 
         var expected = MatchStateBuilder.NextBattingTeamId(match, all);
         var batting = request.BattingTeamId ?? expected;
         if (batting is null) return Fail_(ErrorKind.Unprocessable, "Record the toss first.");
         if (batting != match.HomeTeamId && batting != match.AwayTeamId) return Fail_(ErrorKind.Validation, "The batting team is not playing in this match.");
+        if (superOver && batting != expected) return Fail_(ErrorKind.Validation, "In a Super Over the side that batted second bats first, then the other side chases.");
 
         var followOn = false;
-        if (batting != expected) {
+        if (!superOver && batting != expected) {
             var fo = rules.IsTest && all.Count == 2 && last!.BattingTeamId == batting &&
                      CricketRules.FollowOnAvailable(rules, all[0].TotalRuns, all[1].TotalRuns);
             if (!fo) return Fail_(ErrorKind.Validation, "That batting order is not allowed (follow-on is only possible when enabled and the lead is large enough).");
@@ -246,13 +259,29 @@ public class MatchService : IMatchService {
         var target = CricketRules.ComputeTarget(rules, number, mine.Sum(i => i.TotalRuns), mine.Count,
             theirs.Sum(i => i.TotalRuns), theirs.Count(i => i.Status == InningsStatus.Completed), all.Count > 0 ? all[0].TotalRuns : 0);
 
+        // Super Over: the second innings chases the first one's total; neither is a normal innings
+        if (superOver) target = superInnings % 2 == 1 ? last!.TotalRuns + 1 : null;
+
+        // If rain cut the first innings short, the chase is over the same reduced overs (the scorer then enters the revised target)
+        int? carriedOvers = !superOver && !rules.IsTest && number == 2 && all[0].IsDls ? all[0].OversLimit : null;
+
+        // Penalty runs awarded to this side before it batted are added now
+        var pending = 0;
+        if (!superOver) {
+            if (batting == match.HomeTeamId) { pending = match.PendingPenaltyHome; match.PendingPenaltyHome = 0; }
+            else { pending = match.PendingPenaltyAway; match.PendingPenaltyAway = 0; }
+        }
+
         var innings = new Innings {
             MatchId = id, BattingTeamId = batting.Value, BowlingTeamId = bowling, InningsNumber = number,
             Status = InningsStatus.InProgress, IsFollowOn = followOn, Target = target,
+            IsSuperOver = superOver, OversLimit = superOver ? 1 : carriedOvers, WicketLimit = superOver ? 2 : null, IsDls = !superOver && carriedOvers is not null,
+            PenaltyRuns = pending, TotalRuns = pending, TotalExtras = pending,
             CurrentStrikerId = request.StrikerId, CurrentNonStrikerId = request.NonStrikerId, CurrentBowlerId = request.BowlerId,
         };
         _db.Innings.Add(innings);
         match.CurrentInningsId = innings.Id;
+        if (superOver && tied) { match.ResultType = MatchResultType.None; match.ResultText = null; match.WinnerTeamId = null; match.ActualEnd = null; }
         match.Status = MatchStatus.Live;
         return await _committer.CommitAsync(match);
     }

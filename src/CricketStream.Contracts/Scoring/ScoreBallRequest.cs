@@ -15,6 +15,7 @@ public class ScoreBallRequest {
     public string ExtrasType { get; set; } = "None"; // None, Wide, NoBall, Bye, LegBye
     public string SecondaryExtrasType { get; set; } = "None"; // Bye | LegBye with NoBall
     public bool IsBoundary { get; set; }
+    public int ShortRuns { get; set; }              // runs the umpire took off as short; the strike still changes on the runs actually run
     public WicketRequest? Wicket { get; set; }
 }
 public class PowerSurgeRequest { public bool Start { get; set; } = true; }   // false cancels a surge that has not had a ball bowled yet
@@ -22,4 +23,11 @@ public class SixDistanceRequest { public int? Meters { get; set; } }   // null c
 public class NewBatterRequest { public Guid PlayerId { get; set; } }
 public class NewBowlerRequest { public Guid PlayerId { get; set; } public bool ReplaceMidOver { get; set; } }
 public class RetireRequest { public Guid PlayerId { get; set; } public Guid? NewBatterId { get; set; } public string? Reason { get; set; } }
-public class PenaltyRequest { public int Runs { get; set; } public string? Reason { get; set; } }
+public class PenaltyRequest {
+    public int Runs { get; set; }
+    public string? Reason { get; set; }
+    public bool ToFieldingSide { get; set; }        // false = to the batting side (the usual 5 for a fielding offence); true = to the side that is bowling
+}
+public class AbsentHurtRequest { public Guid PlayerId { get; set; } public bool Absent { get; set; } = true; }
+/// <summary>Rain-reduced overs and/or a DLS target, worked out by the scorer from the DLS tables or app (the app does not compute DLS).</summary>
+public class ReviseInningsRequest { public int? Overs { get; set; } public int? Target { get; set; } public string? Reason { get; set; } }

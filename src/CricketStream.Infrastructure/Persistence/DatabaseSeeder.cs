@@ -108,7 +108,7 @@ public static class DatabaseSeeder
             ("Adam Zampa", PlayerRole.Bowler), ("Josh Hazlewood", PlayerRole.Bowler), ("Marcus Stoinis", PlayerRole.AllRounder),
             ("Nathan Lyon", PlayerRole.Bowler));
 
-        var theme = await db.OverlayThemes.FirstAsync();
+        var theme = await db.OverlayThemes.OrderBy(t => t.Name).FirstAsync();
         var t20 = await db.MatchRules.FirstAsync(r => r.Name == "T20");
         db.Tournaments.Add(new Tournament
         {

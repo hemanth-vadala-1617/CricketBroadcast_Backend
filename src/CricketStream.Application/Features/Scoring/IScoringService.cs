@@ -11,4 +11,7 @@ public interface IScoringService {
     Task<Result<MatchStateDto>> SetSixDistanceAsync(Guid matchId, SixDistanceRequest request);
     Task<Result<MatchStateDto>> RetireAsync(Guid matchId, RetireRequest request, string userId);
     Task<Result<MatchStateDto>> PenaltyAsync(Guid matchId, PenaltyRequest request, string userId);
+    Task<Result<MatchStateDto>> AbsentHurtAsync(Guid matchId, AbsentHurtRequest request, string userId);
+    Task<Result<MatchStateDto>> DeadBallAsync(Guid matchId, string userId);
+    Task<Result<MatchStateDto>> ReviseInningsAsync(Guid matchId, ReviseInningsRequest request, string userId);
 }

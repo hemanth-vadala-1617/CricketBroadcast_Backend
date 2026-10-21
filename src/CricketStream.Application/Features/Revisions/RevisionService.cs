@@ -31,7 +31,7 @@ public class RevisionService : IRevisionService {
         var load = await InningsWork.LoadAsync(_db, matchId, requireInProgress: false);
         if (!load.Succeeded) return Result<MatchStateDto>.Fail(load.Error!);
         var w = load.Value!;
-        var err = BallEngine.VoidLast(w, userId, request.Reason, out var previous);
+        var err = BallEngine.VoidLast(w, userId, request.Reason, out var previous, _db);
         if (err is not null) return Result<MatchStateDto>.Fail(err);
 
         _db.AuditLogs.Add(new AuditLog {
@@ -50,7 +50,7 @@ public class RevisionService : IRevisionService {
         var load = await InningsWork.LoadAsync(_db, matchId, requireInProgress: false);
         if (!load.Succeeded) return Result<MatchStateDto>.Fail(load.Error!);
         var w = load.Value!;
-        var voidErr = BallEngine.VoidLast(w, userId, $"Edited: {request.Reason}", out var previous);
+        var voidErr = BallEngine.VoidLast(w, userId, $"Edited: {request.Reason}", out var previous, _db);
         if (voidErr is not null) return Result<MatchStateDto>.Fail(voidErr);
         var voidedId = w.Balls.Where(b => b.IsVoided).OrderBy(b => b.Sequence).Last().Id;
 
@@ -82,6 +82,12 @@ public class RevisionService : IRevisionService {
         var previous = m.Innings.Where(i => i.Id != inn.Id).OrderBy(i => i.InningsNumber).LastOrDefault();
         m.CurrentInningsId = previous?.Id;
         m.Status = previous is null ? MatchStatus.Live : MatchStatus.InningsBreak;
+        // Penalty runs that were waiting for this side go back to waiting.
+        if (inn.PenaltyRuns > 0) { if (inn.BattingTeamId == m.HomeTeamId) m.PendingPenaltyHome += inn.PenaltyRuns; else m.PendingPenaltyAway += inn.PenaltyRuns; }
+        // Backing out of the first Super Over innings leaves the match tied again.
+        if (inn.IsSuperOver && previous is { IsSuperOver: false }) {
+            m.Status = MatchStatus.Completed; m.ResultType = MatchResultType.Tie; m.ResultText = "Match tied"; m.WinnerTeamId = null; m.ActualEnd = DateTimeOffset.UtcNow;
+        }
         m.Innings.Remove(inn);
         _db.Innings.Remove(inn);
         return await _committer.CommitAsync(m);

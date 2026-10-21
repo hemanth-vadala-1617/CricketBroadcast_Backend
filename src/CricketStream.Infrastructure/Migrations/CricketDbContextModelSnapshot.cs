@@ -4,7 +4,6 @@ using CricketStream.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -16,62 +15,58 @@ namespace CricketStream.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.21")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.21");
 
             modelBuilder.Entity("CricketStream.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ActionType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("action_type");
 
                     b.Property<string>("AfterStateJson")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("after_state_json");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("EntityId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("entity_id");
 
                     b.Property<string>("EntityName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("entity_name");
 
                     b.Property<Guid?>("MatchId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_id");
 
                     b.Property<string>("PreviousStateJson")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("previous_state_json");
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("reason");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -87,120 +82,124 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("BowlerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("bowler_id");
 
                     b.Property<int>("BowlerRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("bowler_runs");
 
                     b.Property<Guid>("ClientRequestId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("client_request_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<int>("Day")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("day");
 
                     b.Property<int>("ExtrasType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("extras_type");
 
                     b.Property<Guid>("InningsId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("innings_id");
 
                     b.Property<bool>("IsBoundary")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_boundary");
 
                     b.Property<bool>("IsFour")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_four");
 
                     b.Property<bool>("IsFreeHit")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_free_hit");
 
                     b.Property<bool>("IsLegal")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_legal");
 
                     b.Property<bool>("IsSix")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_six");
 
                     b.Property<bool>("IsVoided")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_voided");
 
                     b.Property<bool>("IsWicket")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_wicket");
 
                     b.Property<Guid>("NonStrikerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("non_striker_id");
 
                     b.Property<Guid>("OverId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("over_id");
 
                     b.Property<int>("RunsBat")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("runs_bat");
 
                     b.Property<int>("RunsCompleted")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("runs_completed");
 
                     b.Property<int>("RunsExtra")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("runs_extra");
 
                     b.Property<string>("ScoredBy")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("scored_by");
 
                     b.Property<int>("SecondaryExtrasType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("secondary_extras_type");
 
                     b.Property<int>("Sequence")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sequence");
 
                     b.Property<int>("Session")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("session");
 
+                    b.Property<int>("ShortRuns")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("short_runs");
+
                     b.Property<int?>("SixDistance")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("six_distance");
 
                     b.Property<Guid>("StrikerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("striker_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<string>("VoidedBy")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("voided_by");
 
                     b.Property<string>("VoidedReason")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("voided_reason");
 
                     b.HasKey("Id")
@@ -233,35 +232,35 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("BallId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ball_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<int>("DismissalType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("dismissal_type");
 
                     b.Property<Guid>("DismissedPlayerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("dismissed_player_id");
 
                     b.Property<Guid?>("FielderId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("fielder_id");
 
                     b.Property<Guid?>("NewBatterId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("new_batter_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -284,92 +283,112 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("BattingTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("batting_team_id");
 
                     b.Property<Guid>("BowlingTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("bowling_team_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid?>("CurrentBowlerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_bowler_id");
 
                     b.Property<Guid?>("CurrentNonStrikerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_non_striker_id");
 
                     b.Property<Guid?>("CurrentStrikerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_striker_id");
 
+                    b.Property<int>("DeadBalls")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("dead_balls");
+
                     b.Property<bool>("FreeHitPending")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("free_hit_pending");
 
                     b.Property<int>("InningsNumber")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("innings_number");
 
                     b.Property<bool>("IsDeclared")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_declared");
 
+                    b.Property<bool>("IsDls")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_dls");
+
                     b.Property<bool>("IsFollowOn")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_follow_on");
 
+                    b.Property<bool>("IsSuperOver")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_super_over");
+
                     b.Property<Guid?>("LastBowlerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("last_bowler_id");
 
                     b.Property<int>("LegalBalls")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("legal_balls");
 
                     b.Property<Guid>("MatchId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_id");
 
+                    b.Property<int?>("OversLimit")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("overs_limit");
+
                     b.Property<int>("PenaltyRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("penalty_runs");
 
                     b.Property<int?>("PowerSurgeStartOver")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("power_surge_start_over");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("status");
 
                     b.Property<int?>("Target")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("target");
 
                     b.Property<int>("TotalExtras")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_extras");
 
                     b.Property<int>("TotalRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_runs");
 
                     b.Property<int>("TotalWickets")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_wickets");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
+
+                    b.Property<int?>("WicketLimit")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("wicket_limit");
 
                     b.HasKey("Id")
                         .HasName("pk_innings");
@@ -387,134 +406,190 @@ namespace CricketStream.Infrastructure.Migrations
                     b.ToTable("innings", (string)null);
                 });
 
+            modelBuilder.Entity("CricketStream.Domain.Entities.InningsBatterStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AfterBallSequence")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("after_ball_sequence");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InningsId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("innings_id");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("player_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_innings_batter_statuses");
+
+                    b.HasIndex("PlayerId")
+                        .HasDatabaseName("ix_innings_batter_statuses_player_id");
+
+                    b.HasIndex("InningsId", "PlayerId")
+                        .HasDatabaseName("ix_innings_batter_statuses_innings_id_player_id");
+
+                    b.ToTable("innings_batter_statuses", (string)null);
+                });
+
             modelBuilder.Entity("CricketStream.Domain.Entities.Match", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset?>("ActualEnd")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ActualEnd")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("actual_end");
 
-                    b.Property<DateTimeOffset?>("ActualStart")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ActualStart")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("actual_start");
 
                     b.Property<Guid>("AwayTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("away_team_id");
 
                     b.Property<int?>("BreakKind")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("break_kind");
 
                     b.Property<int>("BreakPlannedSeconds")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("break_planned_seconds");
 
-                    b.Property<DateTimeOffset?>("BreakStartedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("BreakStartedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("break_started_at");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<int>("CurrentDay")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("current_day");
 
                     b.Property<Guid?>("CurrentInningsId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_innings_id");
 
                     b.Property<int>("CurrentSession")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("current_session");
 
                     b.Property<Guid>("HomeTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("home_team_id");
 
                     b.Property<int>("MatchFormat")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("match_format");
 
                     b.Property<Guid>("MatchRulesId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_rules_id");
 
                     b.Property<Guid?>("OverlayThemeId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("overlay_theme_id");
 
                     b.Property<int>("OversLostToday")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("overs_lost_today");
 
+                    b.Property<int>("PendingPenaltyAway")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("pending_penalty_away");
+
+                    b.Property<int>("PendingPenaltyHome")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("pending_penalty_home");
+
                     b.Property<string>("ResultText")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("result_text");
 
                     b.Property<int>("ResultType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("result_type");
 
-                    b.Property<DateTimeOffset?>("ScheduledStart")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ScheduledStart")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("scheduled_start");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("status");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("title");
 
                     b.Property<int?>("TossDecision")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("toss_decision");
 
                     b.Property<Guid?>("TossWinnerTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("toss_winner_team_id");
 
                     b.Property<Guid>("TournamentId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tournament_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<Guid>("VenueId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("venue_id");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("version");
 
                     b.Property<int>("WinProbAway")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("win_prob_away");
 
                     b.Property<int>("WinProbDraw")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("win_prob_draw");
 
                     b.Property<int>("WinProbHome")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("win_prob_home");
 
                     b.Property<Guid?>("WinnerTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("winner_team_id");
 
                     b.HasKey("Id")
@@ -554,47 +629,47 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("BattingOrder")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("batting_order");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("IsCaptain")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_captain");
 
                     b.Property<bool>("IsPlayingXI")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_playing_xi");
 
                     b.Property<bool>("IsSubstitute")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_substitute");
 
                     b.Property<bool>("IsWicketKeeper")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_wicket_keeper");
 
                     b.Property<Guid>("MatchId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_id");
 
                     b.Property<Guid>("PlayerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("player_id");
 
                     b.Property<Guid>("TeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("team_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -617,100 +692,100 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("BallsPerOver")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("balls_per_over");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("DRSEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("drs_enabled");
 
                     b.Property<int>("Days")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("days");
 
                     b.Property<bool>("FollowOnEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("follow_on_enabled");
 
                     b.Property<int>("FollowOnMargin")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("follow_on_margin");
 
                     b.Property<bool>("FreeHitEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("free_hit_enabled");
 
                     b.Property<int>("InningsPerSide")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("innings_per_side");
 
                     b.Property<bool>("IsTest")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_test");
 
                     b.Property<int>("MaxOversPerBowler")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_overs_per_bowler");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("NewBallAfterOvers")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("new_ball_after_overs");
 
                     b.Property<int>("NoBallRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("no_ball_runs");
 
                     b.Property<int>("OversPerDay")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("overs_per_day");
 
                     b.Property<int>("OversPerInnings")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("overs_per_innings");
 
                     b.Property<bool>("PowerSurgeEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("power_surge_enabled");
 
                     b.Property<int>("PowerSurgeFromOver")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("power_surge_from_over");
 
                     b.Property<int>("PowerSurgeOvers")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("power_surge_overs");
 
                     b.Property<int>("PowerSurgeToOver")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("power_surge_to_over");
 
                     b.Property<int>("PowerplayOvers")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("powerplay_overs");
 
                     b.Property<int>("SessionsPerDay")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sessions_per_day");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<int>("WideRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("wide_runs");
 
                     b.HasKey("Id")
@@ -727,39 +802,39 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("MatchId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sort_order");
 
                     b.Property<Guid>("TeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("team_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -778,31 +853,31 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("BowlerId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("bowler_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("InningsId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("innings_id");
 
                     b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_completed");
 
                     b.Property<int>("OverNumber")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("over_number");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -822,33 +897,33 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<string>("GraphicKey")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("graphic_key");
 
                     b.Property<bool>("IsVisible")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_visible");
 
                     b.Property<Guid>("MatchId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("match_id");
 
                     b.Property<string>("PayloadJson")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("payload_json");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -865,55 +940,55 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("AccentColor")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("accent_color");
 
                     b.Property<string>("BackgroundUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("background_url");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<string>("LogoUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("PrimaryColor")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("primary_color");
 
                     b.Property<string>("SecondaryColor")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("secondary_color");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<bool>("UseTeamColors")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_team_colors");
 
                     b.Property<string>("WatermarkText")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("watermark_text");
 
                     b.Property<string>("WatermarkUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("watermark_url");
 
                     b.HasKey("Id")
@@ -926,96 +1001,96 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("BattingStyle")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("batting_style");
 
                     b.Property<string>("BowlingStyle")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("bowling_style");
 
                     b.Property<decimal?>("CareerAverage")
-                        .HasColumnType("numeric")
+                        .HasColumnType("TEXT")
                         .HasColumnName("career_average");
 
                     b.Property<int?>("CareerFifties")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("career_fifties");
 
                     b.Property<int?>("CareerHundreds")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("career_hundreds");
 
                     b.Property<string>("CareerLabel")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("career_label");
 
                     b.Property<int?>("CareerMatches")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("career_matches");
 
                     b.Property<int?>("CareerRuns")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("career_runs");
 
                     b.Property<decimal?>("CareerStrikeRate")
-                        .HasColumnType("numeric")
+                        .HasColumnType("TEXT")
                         .HasColumnName("career_strike_rate");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid?>("CurrentTeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_team_id");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("display_name");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("first_name");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_active");
 
                     b.Property<int>("JerseyNumber")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("jersey_number");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("last_name");
 
                     b.Property<string>("PhotoUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("photo_url");
 
                     b.Property<int>("PlayerRole")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("player_role");
 
                     b.Property<string>("ShortName")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("short_name");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1034,33 +1109,33 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expires_at");
 
                     b.Property<bool>("IsRevoked")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_revoked");
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("token");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1077,48 +1152,48 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Country")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("country");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_active");
 
                     b.Property<string>("LogoUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("PrimaryColor")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("primary_color");
 
                     b.Property<string>("SecondaryColor")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("secondary_color");
 
                     b.Property<string>("ShortName")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("short_name");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1135,64 +1210,64 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid?>("DefaultMatchRulesId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("default_match_rules_id");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
-                    b.Property<DateTimeOffset>("EndDate")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("EndDate")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("end_date");
 
                     b.Property<int>("Format")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("format");
 
                     b.Property<string>("LogoUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("OverlayThemeId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("overlay_theme_id");
 
                     b.Property<string>("Season")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("season");
 
                     b.Property<string>("ShortName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("short_name");
 
-                    b.Property<DateTimeOffset>("StartDate")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("StartDate")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("start_date");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("status");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1211,23 +1286,23 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("TeamId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("team_id");
 
                     b.Property<Guid>("TournamentId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tournament_id");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1247,53 +1322,53 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("Capacity")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("capacity");
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("city");
 
                     b.Property<string>("Country")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("country");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<string>("GroundImageUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ground_image_url");
 
                     b.Property<string>("LogoUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("State")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("state");
 
                     b.Property<string>("Timezone")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("timezone");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1305,22 +1380,22 @@ namespace CricketStream.Infrastructure.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("concurrency_stamp");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_name");
 
                     b.HasKey("Id")
@@ -1337,22 +1412,20 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_value");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role_id");
 
                     b.HasKey("Id")
@@ -1367,68 +1440,68 @@ namespace CricketStream.Infrastructure.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("access_failed_count");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("concurrency_stamp");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("email");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("email_confirmed");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("lockout_enabled");
 
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("LockoutEnd")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("lockout_end");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_email");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_user_name");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("phone_number");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("phone_number_confirmed");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("security_stamp");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("two_factor_enabled");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_name");
 
                     b.HasKey("Id")
@@ -1448,22 +1521,20 @@ namespace CricketStream.Infrastructure.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_value");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1478,20 +1549,20 @@ namespace CricketStream.Infrastructure.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("provider_key");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("provider_display_name");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("LoginProvider", "ProviderKey")
@@ -1506,11 +1577,11 @@ namespace CricketStream.Infrastructure.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
@@ -1525,19 +1596,19 @@ namespace CricketStream.Infrastructure.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Value")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("value");
 
                     b.HasKey("UserId", "LoginProvider", "Name")
@@ -1651,6 +1722,27 @@ namespace CricketStream.Infrastructure.Migrations
                     b.Navigation("BowlingTeam");
 
                     b.Navigation("Match");
+                });
+
+            modelBuilder.Entity("CricketStream.Domain.Entities.InningsBatterStatus", b =>
+                {
+                    b.HasOne("CricketStream.Domain.Entities.Innings", "Innings")
+                        .WithMany("BatterStatuses")
+                        .HasForeignKey("InningsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_innings_batter_statuses_innings_innings_id");
+
+                    b.HasOne("CricketStream.Domain.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_innings_batter_statuses_players_player_id");
+
+                    b.Navigation("Innings");
+
+                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("CricketStream.Domain.Entities.Match", b =>
@@ -1920,6 +2012,8 @@ namespace CricketStream.Infrastructure.Migrations
 
             modelBuilder.Entity("CricketStream.Domain.Entities.Innings", b =>
                 {
+                    b.Navigation("BatterStatuses");
+
                     b.Navigation("Overs");
                 });
 

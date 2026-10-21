@@ -14,10 +14,10 @@ public static class MatchCompletion
         inn.IsDeclared = declared;
         inn.UpdatedAt = DateTimeOffset.UtcNow;
         if (m.Status is MatchStatus.Live or MatchStatus.InningsBreak) m.Status = MatchStatus.InningsBreak;
-        TryAutoResult(m, inn);
+        TryAutoResult(m, inn, w.AbsentHurt().Count);
     }
 
-    private static void TryAutoResult(Match m, Innings cur)
+    private static void TryAutoResult(Match m, Innings cur, int absentHurt)
     {
         var rules = m.MatchRules;
         var all = m.Innings.OrderBy(i => i.InningsNumber).ToList();
@@ -29,7 +29,7 @@ public static class MatchCompletion
         {
             m.Status = MatchStatus.Completed; m.ActualEnd = DateTimeOffset.UtcNow;
             m.ResultType = MatchResultType.Win; m.WinnerTeamId = winner;
-            m.ResultText = $"{TeamOf(winner).Name} won by {text}";
+            m.ResultText = $"{TeamOf(winner).Name} won by {text}{(cur.IsDls ? " (DLS method)" : "")}";
         }
         void Tie()
         {
@@ -41,7 +41,7 @@ public static class MatchCompletion
             var t = cur.Target!.Value;
             if (cur.TotalRuns >= t)
             {
-                var wk = Math.Max(0, Xi(cur.BattingTeamId) - 1 - cur.TotalWickets);
+                var wk = Math.Max(0, Xi(cur.BattingTeamId) - absentHurt - 1 - cur.TotalWickets);
                 Win(cur.BattingTeamId, $"{wk} wicket{(wk == 1 ? "" : "s")}");
             }
             else if (cur.TotalRuns == t - 1) Tie();
@@ -50,6 +50,25 @@ public static class MatchCompletion
                 var margin = t - 1 - cur.TotalRuns;
                 Win(Other(cur.BattingTeamId), $"{margin} run{(margin == 1 ? "" : "s")}");
             }
+        }
+
+        if (cur.IsSuperOver)
+        {
+            // The first Super Over innings has no result; the second one decides it. Level again = tied, so another Super Over may follow.
+            if (cur.Target is not { } st) return;
+            if (cur.TotalRuns >= st || cur.TotalRuns < st - 1)
+            {
+                var winner = cur.TotalRuns >= st ? cur.BattingTeamId : Other(cur.BattingTeamId);
+                m.Status = MatchStatus.Completed; m.ActualEnd = DateTimeOffset.UtcNow;
+                m.ResultType = MatchResultType.Win; m.WinnerTeamId = winner;
+                m.ResultText = $"{TeamOf(winner).Name} won the Super Over";
+            }
+            else
+            {
+                m.Status = MatchStatus.Completed; m.ActualEnd = DateTimeOffset.UtcNow;
+                m.ResultType = MatchResultType.Tie; m.WinnerTeamId = null; m.ResultText = "Match tied (Super Over tied)";
+            }
+            return;
         }
 
         if (!rules.IsTest)

@@ -17,10 +17,12 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured (use dotnet user-secrets in development, environment variables in production).");
+            throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured (a SQLite connection string such as \"Data Source=App_Data/cricket.db\").");
 
         services.AddDbContext<CricketDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+            // Queries that load several lists at once (the match with its squad and innings) run as a few small queries instead of one
+            // giant join that repeats every row; EF warned about this on every scoring command.
+            options.UseSqlite(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)).UseSnakeCaseNamingConvention());
         services.AddScoped<ICricketDbContext>(sp => sp.GetRequiredService<CricketDbContext>());
 
         services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -39,7 +41,7 @@ public static class DependencyInjection
         var jwt = configuration.GetSection("JwtSettings");
         var secret = jwt["Secret"];
         if (string.IsNullOrWhiteSpace(secret) || secret.Length < 32)
-            throw new InvalidOperationException("JwtSettings:Secret must be set to at least 32 characters (use dotnet user-secrets in development, environment variables in production).");
+            throw new InvalidOperationException("JwtSettings:Secret must be at least 32 characters (the API creates one on first start; see LocalDataSetup).");
 
         services.AddAuthentication(options =>
         {

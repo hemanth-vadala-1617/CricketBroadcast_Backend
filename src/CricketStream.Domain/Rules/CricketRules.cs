@@ -151,6 +151,37 @@ public static class CricketRules
     public static bool BowlerHasQuotaLeft(int bowlerLegalBalls, MatchRules rules) =>
         rules.MaxOversPerBowler <= 0 || bowlerLegalBalls < rules.MaxOversPerBowler * rules.BallsPerOver;
 
+    // ---- per-innings limits: a Super Over (1 over, 2 wickets) and rain-reduced / DLS innings differ from the rules ----
+
+    /// <summary>The overs this innings is limited to (0 = unlimited): its own limit if it has one, else the rules'.</summary>
+    public static int OversLimit(MatchRules rules, Innings inn) => inn.OversLimit ?? rules.OversPerInnings;
+
+    public static bool OversComplete(int legalBalls, MatchRules rules, Innings inn)
+    {
+        var limit = OversLimit(rules, inn);
+        return limit > 0 && legalBalls >= limit * rules.BallsPerOver;
+    }
+
+    /// <summary>The most overs one bowler may bowl in this innings: the rules' maximum, scaled down in step with a reduced innings
+    /// (a fifth of the innings, rounded up, for the usual 4-in-20), so a 1-over Super Over gives each bowler 1 over.</summary>
+    public static int MaxOversForBowler(MatchRules rules, Innings inn)
+    {
+        var max = rules.MaxOversPerBowler;
+        if (max <= 0) return 0;
+        if (inn.OversLimit is not { } limit || rules.OversPerInnings <= 0 || limit >= rules.OversPerInnings) return max;
+        return Math.Max(1, (int)Math.Ceiling(limit * (double)max / rules.OversPerInnings));
+    }
+
+    public static bool BowlerHasQuotaLeft(int bowlerLegalBalls, MatchRules rules, Innings inn)
+    {
+        var max = MaxOversForBowler(rules, inn);
+        return max <= 0 || bowlerLegalBalls < max * rules.BallsPerOver;
+    }
+
+    /// <summary>Wickets at which the innings must end, given who is left to bat. A Super Over ends at its own wicket limit.</summary>
+    public static bool InningsAllOut(Innings inn, int battersStillAvailable, int totalWickets) =>
+        battersStillAvailable < 2 || (inn.WicketLimit is { } wl && totalWickets >= wl);
+
     /// <summary>Target for the innings being played, or null when none applies yet.
     /// Limited overs: first-innings runs + 1 in the second innings.
     /// Test: only when the batting side is on its second innings and the opposition has finished two.</summary>

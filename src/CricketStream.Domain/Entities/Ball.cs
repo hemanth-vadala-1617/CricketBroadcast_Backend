@@ -14,6 +14,7 @@ public class Ball : BaseEntity {
     public int RunsBat { get; set; }
     public int RunsExtra { get; set; }           // total extras on this ball (incl. wide/no-ball penalty)
     public int BowlerRuns { get; set; }          // runs charged to the bowler
+    public int ShortRuns { get; set; }           // runs the umpire disallowed as short (already taken off the credited runs)
     public int RunsCompleted { get; set; }       // runs physically run (drives strike rotation)
     public ExtrasType ExtrasType { get; set; }           // None/Wide/NoBall/Bye/LegBye
     public ExtrasType SecondaryExtrasType { get; set; }  // Bye/LegBye on a no-ball, else None

@@ -26,6 +26,10 @@ public class Match : BaseEntity {
     public DateTimeOffset? BreakStartedAt { get; set; }
     public int BreakPlannedSeconds { get; set; }     // 0 = no fixed length (the overlay counts up instead of down)
 
+    // Penalty runs awarded to a side that has not batted yet; they are added to its first innings when it starts
+    public int PendingPenaltyHome { get; set; }
+    public int PendingPenaltyAway { get; set; }
+
     // Test-match clock (Day 3 : Session 1, overs left today)
     public int CurrentDay { get; set; } = 1;
     public int CurrentSession { get; set; } = 1;

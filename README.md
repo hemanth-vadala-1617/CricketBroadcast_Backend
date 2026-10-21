@@ -5,7 +5,7 @@ Manual cricket scoring + TV-graphics backend. A scorer enters every ball; the se
 Video/audio is **not** handled here. Stream with OBS (overlay page as a Browser Source + your own mic/video) to YouTube/Facebook. Ball-by-ball text commentary was removed on purpose (it is spoken in OBS).
 
 ## Stack
-.NET 9 · ASP.NET Core · EF Core 9 + PostgreSQL (snake_case) · ASP.NET Identity + JWT · SignalR · FluentValidation · Serilog
+.NET 9 · ASP.NET Core · EF Core 9 + SQLite (snake_case) · ASP.NET Identity + JWT · SignalR · FluentValidation · Serilog
 
 ```
 src/
@@ -20,16 +20,17 @@ tests/
 ```
 
 ## Run it
+Nothing to install: the database is a SQLite file the app creates itself.
 ```powershell
-# one-time: secrets live OUTSIDE the repo
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=CricketBroadcastStream;Username=postgres;Password=<pw>" --project src/CricketStream.API
-dotnet user-secrets set "JwtSettings:Secret" "<at least 32 random characters>" --project src/CricketStream.API
-dotnet user-secrets set "Seed:AdminPassword" "<admin password>" --project src/CricketStream.API
-
-dotnet run --project src/CricketStream.API        # http://localhost:5141 , Development: auto-migrates + seeds
+dotnet run --project src/CricketStream.API        # http://localhost:5141
 dotnet test CricketStream.slnx
 ```
-In Development the first start creates the schema, the roles, an admin user (`Seed:AdminEmail`, default `admin@cricketstream.com`), the rule presets (T20, T10, ODI, Test 5-day), a default overlay theme and, because `Seed:SampleData` is on, an India vs Australia sample (2 squads, 1 tournament, 1 venue). In Production set the same keys as environment variables (`ConnectionStrings__DefaultConnection`, `JwtSettings__Secret`, …), set `Database:AutoMigrate` deliberately, and leave `Seed:SampleData` off. The app refuses to start without a connection string or a JWT secret of 32+ characters.
+On every start the API creates `src/CricketStream.API/App_Data/cricket.db` (git-ignored), applies any new migrations, and seeds the roles, the admin user, the rule presets (T20, BBL, T10, ODI, Test 5-day), a default overlay theme and, because `Seed:SampleData` is on in Development, an India vs Australia sample (2 squads, 1 tournament, 1 venue). Each clone gets its own database. To start fresh, stop the API and delete `App_Data`.
+
+* **Admin login** (from `appsettings.json`): `admin@cricketstream.com` / `SuperAdmin123!` (`Seed:AdminEmail`, `Seed:AdminPassword`). Change them for anything public. The admin is created only when it does not exist yet, so changing the password later needs a fresh database or a password reset.
+* **JWT secret**: generated on first start and kept in `App_Data/jwt.secret`. Set `JwtSettings:Secret` (user-secrets or an environment variable) to use your own.
+* **Database location**: set `ConnectionStrings:DefaultConnection` (for example `Data Source=D:\data\cricket.db`) or `Data:Path` to move the data folder. `Database:AutoMigrate` (default `true`) turns the automatic migration off.
+* Production: leave `Seed:SampleData` off, change the seeded admin password, and back up the `App_Data` folder.
 
 ## Design rules that matter
 * **The ball log is the source of truth.** Totals, batter/bowler figures, partnerships, fall of wickets, timeline and the whole `MatchStateDto` are recomputed from the non-voided balls by `MatchStateBuilder`. Undo *voids* a ball and rewinds the crease to the exact pre-ball positions stored on that ball.
@@ -37,7 +38,7 @@ In Development the first start creates the schema, the roles, an admin user (`Se
 * **One realtime message**: `MatchStateUpdated(MatchStateDto)` with a monotonically increasing `version` (also the optimistic-concurrency token — a second scorer gets **409**, not corruption). The hub is read-only; every mutation is an authorised REST call. `JoinMatch(matchId)` replies with the current state, which doubles as the resync after a reconnect.
 * **Idempotent scoring**: every ball carries a `clientRequestId` (unique index); a retried request returns the current state instead of a second ball.
 * **No exceptions for expected failures**: services return `Result<T>`; controllers map them to 400/404/409/422 ProblemDetails.
-* `DateTimeOffset` values are normalised to UTC (Npgsql only accepts offset 0).
+* `DateTimeOffset` values are stored as UTC ticks (SQLite cannot sort or compare them otherwise).
 
 ## API at a glance
 | Area | Endpoints |

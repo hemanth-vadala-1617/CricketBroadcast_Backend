@@ -93,6 +93,10 @@ public class InningsStateDto {
     public bool Powerplay { get; set; }
     public PowerSurgeDto? PowerSurge { get; set; }   // null when the rules have no Power Surge
     public bool NewBallDue { get; set; }
+    public bool IsSuperOver { get; set; }
+    public bool IsDls { get; set; }                  // overs and/or target were revised (rain, DLS)
+    public int OversLimit { get; set; }              // overs this innings is limited to (0 = unlimited)
+    public int DeadBalls { get; set; }               // dead balls called in this innings; a change flashes DEAD BALL on the overlay
     public BatterDto? Striker { get; set; }
     public BatterDto? NonStriker { get; set; }
     public BowlerDto? Bowler { get; set; }
@@ -239,7 +243,12 @@ public class MatchActionsDto {
     public bool InningsOver { get; set; }
     public bool CanDeclare { get; set; }
     public bool FollowOnAvailable { get; set; }
+    public int FollowOnLead { get; set; }                  // first-innings runs minus second-innings runs (what the follow-on rule looks at)
+    public bool CanStartSuperOver { get; set; }            // a limited-overs match that ended tied
+    public bool CanReviseTarget { get; set; }              // a limited-overs innings is under way: rain-reduced overs / DLS target can be entered
     public bool CanComplete { get; set; }
+    public List<Guid> RetiredHurtIds { get; set; } = new();   // batters who retired hurt in this innings and may come back
+    public List<Guid> AbsentHurtIds { get; set; } = new();    // batting-side players who cannot bat in this innings
     public Guid? NextBattingTeamId { get; set; }
     public List<PlayerLiteDto> AvailableBatters { get; set; } = new();
     public List<PlayerLiteDto> EligibleBowlers { get; set; } = new();
@@ -269,6 +278,10 @@ public class InningsScorecardDto {
     public List<BowlerLineDto> Bowling { get; set; } = new();
     public List<FallOfWicketDto> FallOfWickets { get; set; } = new();
     public List<string> YetToBat { get; set; } = new();
+    public List<string> AbsentHurt { get; set; } = new();
+    public bool IsSuperOver { get; set; }
+    public bool IsFollowOn { get; set; }
+    public bool IsDls { get; set; }
 }
 
 public class BatterLineDto {

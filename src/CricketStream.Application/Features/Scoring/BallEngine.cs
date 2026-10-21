@@ -33,8 +33,19 @@ public static class BallEngine
         }
 
         var freeHit = inn.FreeHitPending && rules.FreeHitEnabled;
-        var input = new DeliveryInput(r.RunsBat, r.ExtraRuns, primary, secondary, r.IsBoundary, r.Wicket is not null, dismissal, freeHit);
-        var invalid = CricketRules.Validate(input);
+
+        // Short run: the umpire takes runs off what the batters ran. The runs credited fall, but the batters still crossed
+        // that many times, so the strike changes on the runs actually run (the 'physical' input).
+        var shortRuns = r.ShortRuns;
+        var attempted = r.RunsBat > 0 ? r.RunsBat : r.ExtraRuns;
+        if (shortRuns < 0) return Fail.Validation("Short runs cannot be negative.");
+        if (shortRuns > 0 && r.IsBoundary) return Fail.Validation("A boundary cannot be a short run.");
+        if (shortRuns > attempted) return Fail.Validation("The short runs cannot be more than the runs that were run.");
+        var creditedBat = r.RunsBat > 0 ? r.RunsBat - shortRuns : r.RunsBat;
+        var creditedExtra = r.RunsBat > 0 ? r.ExtraRuns : r.ExtraRuns - shortRuns;
+        var physical = new DeliveryInput(r.RunsBat, r.ExtraRuns, primary, secondary, r.IsBoundary, r.Wicket is not null, dismissal, freeHit);
+        var input = shortRuns == 0 ? physical : physical with { RunsBat = creditedBat, ExtraRuns = creditedExtra };
+        var invalid = CricketRules.Validate(physical) ?? (shortRuns == 0 ? null : CricketRules.Validate(input));
         if (invalid is not null) return Fail.Validation(invalid);
 
         // ---- wicket details ----
@@ -81,7 +92,7 @@ public static class BallEngine
             OverId = over.Id, InningsId = inn.Id, Sequence = (w.Balls.Count == 0 ? 0 : w.Balls.Max(b => b.Sequence)) + 1,
             StrikerId = striker, NonStrikerId = nonStriker, BowlerId = bowler,
             RunsBat = outcome.RunsBat, RunsExtra = outcome.ExtrasTotal, BowlerRuns = outcome.BowlerRuns,
-            RunsCompleted = outcome.RunsCompleted, ExtrasType = primary, SecondaryExtrasType = secondary,
+            RunsCompleted = outcome.RunsCompleted, ShortRuns = shortRuns, ExtrasType = primary, SecondaryExtrasType = secondary,
             IsBoundary = outcome.IsBoundary, IsFour = outcome.IsFour, IsSix = outcome.IsSix, IsLegal = outcome.IsLegal,
             IsFreeHit = freeHit, IsWicket = r.Wicket is not null, Day = m.CurrentDay, Session = m.CurrentSession,
             ScoredBy = userId, ClientRequestId = r.ClientRequestId,
@@ -97,7 +108,7 @@ public static class BallEngine
 
         // ---- strike & crease ----
         Guid? s = striker, n = nonStriker;
-        var runsForSwap = outcome.RunsCompleted;
+        var runsForSwap = shortRuns == 0 ? outcome.RunsCompleted : CricketRules.Evaluate(physical, rules).RunsCompleted;
         if (dismissal is { } dd && CricketRules.IgnoresCrossing(dd)) runsForSwap = 0;
         if (CricketRules.SwapsStrike(runsForSwap)) (s, n) = (n, s);
         if (dismissedId is { } gone)
@@ -123,9 +134,10 @@ public static class BallEngine
         w.RecomputeTotals();
 
         // ---- innings end? ----
-        var xi = w.BattingXi().Count;
-        var allOut = r.Wicket is not null && inn.TotalWickets >= xi - 1;
-        var oversDone = endOfOver && CricketRules.OversComplete(inn.LegalBalls, rules);
+        // All out = fewer than two batters left who are neither out nor absent hurt (a retired-hurt batter can still come back),
+        // or the innings' own wicket limit (a Super Over ends at 2).
+        var allOut = r.Wicket is not null && CricketRules.InningsAllOut(inn, w.BattersAvailable(), inn.TotalWickets);
+        var oversDone = endOfOver && CricketRules.OversComplete(inn.LegalBalls, rules, inn);
         var targetDone = inn.Target is { } target && inn.TotalRuns >= target;
         if (allOut || oversDone || targetDone) MatchCompletion.EndInnings(w);
         return null;
@@ -136,6 +148,7 @@ public static class BallEngine
     {
         if (!w.BattingXi().Any(p => p.PlayerId == playerId)) return Fail.Validation("The incoming batter must be in the batting XI.");
         if (w.Dismissed().Contains(playerId) || playerId == dismissedNow) return Fail.Validation("That batter is already out.");
+        if (w.AbsentHurt().Contains(playerId)) return Fail.Validation("That player is absent hurt and cannot bat in this innings.");
         var inn = w.Innings;
         if (playerId == inn.CurrentStrikerId || playerId == inn.CurrentNonStrikerId || playerId == extraAtCrease)
             return Fail.Validation("That batter is already at the crease.");
@@ -143,11 +156,15 @@ public static class BallEngine
     }
 
     /// <summary>Voids the last live ball and rewinds the crease to exactly how it was before that ball.</summary>
-    public static Error? VoidLast(InningsWork w, string userId, string reason, out string? previousJson)
+    public static Error? VoidLast(InningsWork w, string userId, string reason, out string? previousJson, ICricketDbContext? db = null)
     {
         previousJson = null;
         var ball = w.Live.OrderBy(b => b.Sequence).LastOrDefault();
         if (ball is null) return Fail.Unprocessable("There is no ball to undo in this innings.");
+
+        // A retirement / absence recorded after this ball is undone with it: the crease is rewound to before the ball.
+        var undone = w.Statuses.Where(s => s.AfterBallSequence >= ball.Sequence).ToList();
+        foreach (var s in undone) { w.Statuses.Remove(s); db?.InningsBatterStatuses.Remove(s); }
 
         previousJson = JsonSerializer.Serialize(Snapshot(ball));
         ball.IsVoided = true;

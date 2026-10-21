@@ -14,8 +14,23 @@ public sealed class InningsWork
     public Innings Innings { get; private init; } = null!;
     public List<Ball> Balls { get; private init; } = new();
     public List<Over> Overs { get; private init; } = new();
+    public List<InningsBatterStatus> Statuses { get; private init; } = new();
 
     public MatchRules Rules => Match.MatchRules;
+
+    /// <summary>Players who cannot bat in this innings (absent hurt).</summary>
+    public HashSet<Guid> AbsentHurt() => Statuses.Where(s => s.Kind == BatterStatusKind.AbsentHurt).Select(s => s.PlayerId).ToHashSet();
+
+    /// <summary>Batters who could still come in or are already in: not out and not absent hurt. A retired-hurt batter is not out, so he counts.</summary>
+    public int BattersAvailable()
+    {
+        var gone = Dismissed(); var absent = AbsentHurt();
+        return BattingXi().Count(p => !gone.Contains(p.PlayerId) && !absent.Contains(p.PlayerId));
+    }
+
+    /// <summary>The match must be in play (not in a break, a rain delay or finished) for crease changes such as a strike swap.</summary>
+    public Error? MustBeLive() =>
+        Match.Status == MatchStatus.Live ? null : Fail.Unprocessable($"The match is {Match.Status}; resume play first.");
     public IEnumerable<Ball> Live => Balls.Where(b => !b.IsVoided);
 
     public HashSet<Guid> Dismissed() =>
@@ -64,6 +79,8 @@ public sealed class InningsWork
             .Where(b => b.InningsId == innings.Id).OrderBy(b => b.Sequence).ToListAsync();
         var overs = await db.Overs.Where(o => o.InningsId == innings.Id).OrderBy(o => o.OverNumber).ToListAsync();
 
-        return Result<InningsWork>.Ok(new InningsWork { Match = match, Innings = innings, Balls = balls, Overs = overs });
+        var statuses = await db.InningsBatterStatuses.Where(s => s.InningsId == innings.Id).OrderBy(s => s.AfterBallSequence).ToListAsync();
+
+        return Result<InningsWork>.Ok(new InningsWork { Match = match, Innings = innings, Balls = balls, Overs = overs, Statuses = statuses });
     }
 }

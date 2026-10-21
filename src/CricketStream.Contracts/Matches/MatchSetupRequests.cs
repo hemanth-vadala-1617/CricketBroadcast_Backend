@@ -36,6 +36,7 @@ public class StartInningsRequest {
     public Guid StrikerId { get; set; }
     public Guid NonStrikerId { get; set; }
     public Guid BowlerId { get; set; }
+    public bool SuperOver { get; set; }        // start a Super Over (a tied limited-overs match)
 }
 public class EndInningsRequest { public bool Declared { get; set; } public string? Reason { get; set; } }
 public class CompleteMatchRequest {

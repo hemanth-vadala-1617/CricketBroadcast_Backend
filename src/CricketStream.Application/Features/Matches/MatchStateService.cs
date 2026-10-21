@@ -20,6 +20,7 @@ public class MatchStateService : IMatchStateService {
             .Include(m => m.Tournament).Include(m => m.MatchRules).Include(m => m.OverlayTheme)
             .Include(m => m.MatchPlayers).ThenInclude(mp => mp.Player)
             .Include(m => m.Innings).ThenInclude(i => i.Overs).ThenInclude(o => o.Balls).ThenInclude(b => b.Dismissal)
+            .Include(m => m.Innings).ThenInclude(i => i.BatterStatuses)
             .FirstOrDefaultAsync(m => m.Id == matchId);
         if (match is null) return null;
         if (match.OverlayTheme is null && match.Tournament.OverlayThemeId is { } tournamentTheme)

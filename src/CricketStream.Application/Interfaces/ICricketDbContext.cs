@@ -14,6 +14,7 @@ public interface ICricketDbContext {
     DbSet<TournamentTeam> TournamentTeams { get; }
     DbSet<MatchStaff> MatchStaff { get; }
     DbSet<Innings> Innings { get; }
+    DbSet<InningsBatterStatus> InningsBatterStatuses { get; }
     DbSet<Over> Overs { get; }
     DbSet<Ball> Balls { get; }
     DbSet<Dismissal> Dismissals { get; }

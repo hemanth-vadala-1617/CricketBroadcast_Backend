@@ -21,6 +21,7 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
     public DbSet<MatchStaff> MatchStaff => Set<MatchStaff>();
     public DbSet<Innings> Innings => Set<Innings>();
+    public DbSet<InningsBatterStatus> InningsBatterStatuses => Set<InningsBatterStatus>();
     public DbSet<Over> Overs => Set<Over>();
     public DbSet<Ball> Balls => Set<Ball>();
     public DbSet<Dismissal> Dismissals => Set<Dismissal>();
@@ -29,7 +30,7 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
 
     public CricketDbContext(DbContextOptions<CricketDbContext> options) : base(options) { }
 
-    /// <summary>Npgsql only accepts UTC offsets. Clients send +05:30 etc., so every DateTimeOffset is normalised to UTC on the way in.</summary>
+    /// <summary>SQLite cannot sort or compare DateTimeOffset values: every one is stored as UTC ticks, which also normalises offsets such as +05:30.</summary>
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTimeOffset>()
@@ -103,6 +104,12 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
             e.HasOne(i => i.BattingTeam).WithMany().HasForeignKey(i => i.BattingTeamId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(i => i.BowlingTeam).WithMany().HasForeignKey(i => i.BowlingTeamId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(i => new { i.MatchId, i.InningsNumber }).IsUnique();
+        });
+        b.Entity<InningsBatterStatus>(e => {
+            e.HasOne(s => s.Innings).WithMany(i => i.BatterStatuses).HasForeignKey(s => s.InningsId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Player).WithMany().HasForeignKey(s => s.PlayerId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(s => s.Reason).HasMaxLength(200);
+            e.HasIndex(s => new { s.InningsId, s.PlayerId });
         });
         b.Entity<Over>(e => {
             e.HasOne(o => o.Innings).WithMany(i => i.Overs).HasForeignKey(o => o.InningsId).OnDelete(DeleteBehavior.Cascade);

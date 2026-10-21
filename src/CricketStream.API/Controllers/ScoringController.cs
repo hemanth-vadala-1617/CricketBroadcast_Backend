@@ -31,6 +31,15 @@ public class ScoringController : ApiControllerBase {
     [HttpPost("match/{matchId:guid}/retire")]
     public async Task<IActionResult> Retire(Guid matchId, RetireRequest request) => From(await _scoring.RetireAsync(matchId, request, UserId));
 
+    [HttpPost("match/{matchId:guid}/absent-hurt")]
+    public async Task<IActionResult> AbsentHurt(Guid matchId, AbsentHurtRequest request) => From(await _scoring.AbsentHurtAsync(matchId, request, UserId));
+
+    [HttpPost("match/{matchId:guid}/dead-ball")]
+    public async Task<IActionResult> DeadBall(Guid matchId) => From(await _scoring.DeadBallAsync(matchId, UserId));
+
+    [HttpPost("match/{matchId:guid}/revise")]
+    public async Task<IActionResult> Revise(Guid matchId, ReviseInningsRequest request) => From(await _scoring.ReviseInningsAsync(matchId, request, UserId));
+
     [HttpPost("match/{matchId:guid}/penalty")]
     public async Task<IActionResult> Penalty(Guid matchId, PenaltyRequest request) => From(await _scoring.PenaltyAsync(matchId, request, UserId));
 }

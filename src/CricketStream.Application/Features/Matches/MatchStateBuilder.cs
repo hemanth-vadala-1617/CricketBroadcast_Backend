@@ -37,6 +37,8 @@ public static class MatchStateBuilder
         public List<FallOfWicketDto> Fow = new();
         public int PartnerRuns, PartnerBalls;
         public HashSet<Guid> Dismissed = new();
+        public HashSet<Guid> Retired = new();      // retired hurt in this innings (may be back at the crease now)
+        public HashSet<Guid> Absent = new();       // absent hurt: cannot bat in this innings
         public string ExtrasText = "";
     }
 
@@ -49,6 +51,9 @@ public static class MatchStateBuilder
             return m.TossDecision == TossDecision.Bat ? m.TossWinnerTeamId : other;
         }
         var last = ordered[^1].BattingTeamId;
+        // The first innings of a Super Over (and of each further one): the side that batted last bats first again.
+        var mainInnings = Math.Max(1, m.MatchRules.InningsPerSide) * 2;
+        if (!m.MatchRules.IsTest && ordered.Count >= mainInnings && (ordered.Count - mainInnings) % 2 == 0) return last;
         return last == m.HomeTeamId ? m.AwayTeamId : m.HomeTeamId;
     }
 
@@ -141,7 +146,7 @@ public static class MatchStateBuilder
         var overs = rules.PowerSurgeOvers > 0 ? rules.PowerSurgeOvers : 2;
         var overNow = legalBalls / bpo + 1;                    // the over being bowled, or about to start
         var atBoundary = legalBalls % bpo == 0;
-        var (from, to) = PowerSurgeWindow(rules, overs);
+        var (from, to) = PowerSurgeWindow(rules, overs, CricketRules.OversLimit(rules, inn));
         var nextStart = atBoundary ? overNow : overNow + 1;    // where a surge started now would begin
         var start = inn.PowerSurgeStartOver;
         var used = start is not null;
@@ -158,10 +163,11 @@ public static class MatchStateBuilder
     }
 
     /// <summary>The overs a surge may begin in: the rule's window for BBL-style rules, otherwise anywhere it still fits in the innings.</summary>
-    public static (int From, int To) PowerSurgeWindow(MatchRules rules, int overs)
+    public static (int From, int To) PowerSurgeWindow(MatchRules rules, int overs, int? oversLimit = null)
     {
         if (rules.PowerSurgeEnabled) return (Math.Max(1, rules.PowerSurgeFromOver), Math.Max(rules.PowerSurgeFromOver, rules.PowerSurgeToOver));
-        return (1, rules.OversPerInnings > 0 ? Math.Max(1, rules.OversPerInnings - overs + 1) : int.MaxValue);
+        var limit = oversLimit ?? rules.OversPerInnings;
+        return (1, limit > 0 ? Math.Max(1, limit - overs + 1) : int.MaxValue);
     }
 
     /// <summary>Fours in a row by the batter of the last ball (same rules as <see cref="SixStreak"/>: a wide is skipped, anything else ends the run).</summary>
@@ -296,6 +302,13 @@ public static class MatchStateBuilder
         if (inn.CurrentNonStrikerId is { } n) { Touch(n, c.BatOrder); c.Bat.TryAdd(n, new BatAcc()); }
         if (inn.CurrentBowlerId is { } cb) { Touch(cb, c.BowlOrder); c.Bowl.TryAdd(cb, new BowlAcc()); }
 
+        // A batter who retired hurt is on the scorecard even if he never faced a ball; an absent-hurt one is not.
+        foreach (var st in inn.BatterStatuses.OrderBy(x => x.AfterBallSequence))
+        {
+            if (st.Kind == BatterStatusKind.RetiredHurt) { c.Retired.Add(st.PlayerId); Touch(st.PlayerId, c.BatOrder); c.Bat.TryAdd(st.PlayerId, new BatAcc()); }
+            else c.Absent.Add(st.PlayerId);
+        }
+
         // Maidens: a completed over, one bowler, nothing charged to him.
         foreach (var over in inn.Overs)
         {
@@ -376,6 +389,7 @@ public static class MatchStateBuilder
                 Overs = CricketRules.FormatOvers(c.LegalBalls, bpo), Extras = c.Extras, ExtrasText = c.ExtrasText,
                 RunRate = CricketRules.RunRate(c.Runs, c.LegalBalls, bpo),
                 IsCompleted = i.Status == InningsStatus.Completed, FallOfWickets = c.Fow,
+                IsSuperOver = i.IsSuperOver, IsFollowOn = i.IsFollowOn, IsDls = i.IsDls,
             };
             foreach (var id in c.BatOrder)
             {
@@ -386,7 +400,9 @@ public static class MatchStateBuilder
                     PlayerId = id, Name = Name(id), IsCaptain = roster.TryGetValue(id, out var rp) && rp.IsCaptain, IsWicketKeeper = rp is not null && rp.IsWicketKeeper,
                     Runs = a.Runs, Balls = a.Balls, Fours = a.Fours, Sixes = a.Sixes,
                     StrikeRate = CricketRules.StrikeRate(a.Runs, a.Balls),
-                    Status = a.Out is not null ? "out" : atCrease && i.Status == InningsStatus.InProgress ? "batting"
+                    Status = a.Out is not null ? "out"
+                           : atCrease ? (i.Status == InningsStatus.InProgress ? "batting" : "not out")
+                           : c.Retired.Contains(id) ? "retired hurt"
                            : i.Status == InningsStatus.Completed ? "not out" : "retired hurt",
                     DismissalText = a.Out is not null && a.OutBall is not null ? DismissalText(a.Out, a.OutBall, Name) : "",
                 });
@@ -401,8 +417,9 @@ public static class MatchStateBuilder
                     Economy = CricketRules.Economy(a.Runs, a.LegalBalls, bpo),
                 });
             }
-            card.YetToBat = Xi(i.BattingTeamId).Where(p => !c.BatOrder.Contains(p.PlayerId))
+            card.YetToBat = Xi(i.BattingTeamId).Where(p => !c.BatOrder.Contains(p.PlayerId) && !c.Absent.Contains(p.PlayerId))
                 .Select(p => p.Player.DisplayName).ToList();
+            card.AbsentHurt = Xi(i.BattingTeamId).Where(p => c.Absent.Contains(p.PlayerId)).Select(p => p.Player.DisplayName).ToList();
             dto.Scorecard.Add(card);
 
             if (latest is not null && i.Id != latest.Id)
@@ -433,12 +450,15 @@ public static class MatchStateBuilder
                 Partnership = new PartnershipDto { Runs = c.PartnerRuns, Balls = c.PartnerBalls },
                 Powerplay = inProgress && !rules.IsTest && CricketRules.IsPowerplay(completedOvers, rules),
                 NewBallDue = inProgress && rules.NewBallAfterOvers > 0 && completedOvers == rules.NewBallAfterOvers,
-                PowerSurge = !rules.IsTest ? PowerSurgeState(latest, rules, c.LegalBalls, inProgress) : null,
+                PowerSurge = !rules.IsTest && !latest.IsSuperOver ? PowerSurgeState(latest, rules, c.LegalBalls, inProgress) : null,
+                IsSuperOver = latest.IsSuperOver, IsDls = latest.IsDls, DeadBalls = latest.DeadBalls,
+                OversLimit = CricketRules.OversLimit(rules, latest),
             };
+            if (!rules.IsTest) dto.OversPerInnings = s.OversLimit;   // the overs this innings is really limited to (reduced by rain, or a Super Over)
 
-            if (rules.OversPerInnings > 0 && !rules.IsTest)
+            if (s.OversLimit > 0 && !rules.IsTest)
             {
-                var total = rules.OversPerInnings * bpo;
+                var total = s.OversLimit * bpo;
                 s.BallsRemaining = Math.Max(0, total - c.LegalBalls);
                 if (latest.Target is null && c.LegalBalls > 0)
                     s.ProjectedScore = Math.Round(c.Runs * (decimal)total / c.LegalBalls, 0);
@@ -589,17 +609,24 @@ public static class MatchStateBuilder
         a2.CanRecordToss = m.Status == MatchStatus.Scheduled && homeXi >= 2 && awayXi >= 2;
         a2.CanStartMatch = m.Status == MatchStatus.TossCompleted;
         var maxInnings = Math.Max(1, rules.InningsPerSide) * 2;
-        a2.CanStartInnings = liveish && (latest is null || latest.Status == InningsStatus.Completed) && innings.Count < maxInnings;
+        var superInnings = innings.Count(i => i.IsSuperOver);
+        var secondSuperInnings = latest is { IsSuperOver: true } && superInnings % 2 == 1;   // the first Super Over innings is done; the chase is next
+        a2.CanStartInnings = liveish && (latest is null || latest.Status == InningsStatus.Completed) && (innings.Count < maxInnings || secondSuperInnings);
+        a2.CanStartSuperOver = !rules.IsTest && m.Status == MatchStatus.Completed && m.ResultType == MatchResultType.Tie
+            && innings.Count >= maxInnings && latest?.Status == InningsStatus.Completed;
         a2.CanComplete = liveish;
         a2.CanUndo = (liveish || m.Status == MatchStatus.Completed) && latest is not null && calcs[latest.Id].Balls.Count > 0;
         a2.InningsOver = latest?.Status == InningsStatus.Completed;
         var inProg = latest is { Status: InningsStatus.InProgress };
         a2.CanDeclare = inProg && rules.IsTest;
         if (rules.IsTest && innings.Count == 2 && latest!.Status == InningsStatus.Completed)
+        {
+            a2.FollowOnLead = calcs[innings[0].Id].Runs - calcs[innings[1].Id].Runs;
             a2.FollowOnAvailable = CricketRules.FollowOnAvailable(rules, calcs[innings[0].Id].Runs, calcs[innings[1].Id].Runs);
+        }
 
         Guid? activeBatTeam = inProg ? latest!.BattingTeamId : NextBattingTeamId(m, innings);
-        a2.NextBattingTeamId = a2.CanStartInnings ? NextBattingTeamId(m, innings) : null;
+        a2.NextBattingTeamId = a2.CanStartInnings || a2.CanStartSuperOver ? NextBattingTeamId(m, innings) : null;
         if (activeBatTeam is { } bt)
         {
             var ft = bt == m.HomeTeamId ? m.AwayTeamId : m.HomeTeamId;
@@ -613,10 +640,13 @@ public static class MatchStateBuilder
             a2.AwaitingNewBowler = l.CurrentBowlerId is null;
             a2.CanScoreBall = m.Status == MatchStatus.Live && !a2.AwaitingNewBatter && !a2.AwaitingNewBowler;
             a2.AvailableBatters = a2.BattingXI
-                .Where(p => !dismissedAll.Contains(p.Id) && p.Id != l.CurrentStrikerId && p.Id != l.CurrentNonStrikerId).ToList();
+                .Where(p => !dismissedAll.Contains(p.Id) && !c.Absent.Contains(p.Id) && p.Id != l.CurrentStrikerId && p.Id != l.CurrentNonStrikerId).ToList();
+            a2.RetiredHurtIds = c.Retired.Where(id => id != l.CurrentStrikerId && id != l.CurrentNonStrikerId && !dismissedAll.Contains(id)).ToList();
+            a2.AbsentHurtIds = c.Absent.ToList();
+            a2.CanReviseTarget = !rules.IsTest && !l.IsSuperOver;
             a2.EligibleBowlers = a2.FieldingXI.Where(p =>
                 p.Id != l.LastBowlerId && p.Id != l.CurrentBowlerId &&
-                CricketRules.BowlerHasQuotaLeft(c.Bowl.GetValueOrDefault(p.Id)?.LegalBalls ?? 0, rules)).ToList();
+                CricketRules.BowlerHasQuotaLeft(c.Bowl.GetValueOrDefault(p.Id)?.LegalBalls ?? 0, rules, l)).ToList();
         }
         return dto;
     }

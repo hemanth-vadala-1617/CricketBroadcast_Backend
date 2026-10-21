@@ -11,6 +11,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// SQLite file + JWT secret in App_Data, created on first start (nothing to install or configure)
+LocalDataSetup.Apply(builder.Configuration, builder.Environment.ContentRootPath);
+
 builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
 
 // FluentValidation owns validation; MVC's implicit [Required] on every non-nullable string would reject legitimate empty optional fields ("").
@@ -88,9 +91,13 @@ app.MapControllers();
 app.MapHub<CricketStream.API.Hubs.MatchHub>("/hubs/match");
 app.MapHealthChecks("/health");
 
-if (builder.Configuration.GetValue("Database:AutoMigrate", app.Environment.IsDevelopment())) {
+// The database is created and brought up to date on every start (set Database:AutoMigrate to false to turn that off).
+if (builder.Configuration.GetValue("Database:AutoMigrate", true)) {
     using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<CricketDbContext>().Database.MigrateAsync();
+    var db = scope.ServiceProvider.GetRequiredService<CricketDbContext>();
+    await db.Database.MigrateAsync();
+    // WAL lets the overlay and public pages read while the scorer writes
+    await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 }
 await DatabaseSeeder.SeedAsync(app.Services);
 app.Run();

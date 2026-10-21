@@ -20,3 +20,5 @@ uploads/
 appsettings.*.local.json
 .env
 *.pfx
+# Local SQLite database and generated JWT secret (created on first start)
+App_Data/

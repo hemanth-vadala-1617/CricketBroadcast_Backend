@@ -25,10 +25,16 @@ public class Innings : BaseEntity {
     public Guid? CurrentBowlerId { get; set; }
     public Guid? LastBowlerId { get; set; }
     public bool FreeHitPending { get; set; }
+    public bool IsSuperOver { get; set; }
+    public int? OversLimit { get; set; }      // overs this innings is limited to when that differs from the rules (Super Over = 1, rain-reduced / DLS); null = the rules' overs
+    public int? WicketLimit { get; set; }     // the innings ends at this many wickets (Super Over = 2); null = all out
+    public bool IsDls { get; set; }           // the target and/or overs were revised by the scorer (Duckworth-Lewis-Stern)
+    public int DeadBalls { get; set; }        // dead balls called so far; when the count changes the overlay flashes DEAD BALL
     public int? PowerSurgeStartOver { get; set; }   // the over (1-based) the batting side's Power Surge began at; null = not taken
 
     public Match Match { get; set; } = null!;
     public Team BattingTeam { get; set; } = null!;
     public Team BowlingTeam { get; set; } = null!;
     public ICollection<Over> Overs { get; set; } = new List<Over>();
+    public ICollection<InningsBatterStatus> BatterStatuses { get; set; } = new List<InningsBatterStatus>();
 }
