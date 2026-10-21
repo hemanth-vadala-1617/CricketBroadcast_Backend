@@ -172,6 +172,7 @@ public class MasterDataService : IMasterDataService {
         MaxOversPerBowler = r.MaxOversPerBowler, PowerplayOvers = r.PowerplayOvers, WideRuns = r.WideRuns, NoBallRuns = r.NoBallRuns,
         FreeHitEnabled = r.FreeHitEnabled, FollowOnEnabled = r.FollowOnEnabled, InningsPerSide = r.InningsPerSide, Days = r.Days,
         OversPerDay = r.OversPerDay, SessionsPerDay = r.SessionsPerDay, NewBallAfterOvers = r.NewBallAfterOvers, FollowOnMargin = r.FollowOnMargin,
+        PowerSurgeEnabled = r.PowerSurgeEnabled, PowerSurgeOvers = r.PowerSurgeOvers, PowerSurgeFromOver = r.PowerSurgeFromOver, PowerSurgeToOver = r.PowerSurgeToOver,
     };
 
     public async Task<List<MatchRulesDto>> ListRulesAsync() =>
@@ -192,6 +193,7 @@ public class MasterDataService : IMasterDataService {
         r.FreeHitEnabled = dto.FreeHitEnabled; r.FollowOnEnabled = dto.FollowOnEnabled; r.InningsPerSide = dto.InningsPerSide; r.Days = dto.Days;
         r.OversPerDay = dto.OversPerDay; r.SessionsPerDay = dto.SessionsPerDay; r.NewBallAfterOvers = dto.NewBallAfterOvers;
         r.FollowOnMargin = dto.FollowOnMargin; r.UpdatedAt = DateTimeOffset.UtcNow;
+        r.PowerSurgeEnabled = dto.PowerSurgeEnabled; r.PowerSurgeOvers = dto.PowerSurgeOvers; r.PowerSurgeFromOver = dto.PowerSurgeFromOver; r.PowerSurgeToOver = dto.PowerSurgeToOver;
         await _db.SaveChangesAsync();
         return Result<MatchRulesDto>.Ok(Map(r));
     }

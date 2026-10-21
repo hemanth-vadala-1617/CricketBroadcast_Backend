@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Common;
+using CricketStream.Domain.Common;
 using CricketStream.Domain.Enums;
 namespace CricketStream.Domain.Entities;
 /// <summary>Aggregate columns (runs, wickets, extras, LegalBalls) are a cache of the ball log,
@@ -25,6 +25,7 @@ public class Innings : BaseEntity {
     public Guid? CurrentBowlerId { get; set; }
     public Guid? LastBowlerId { get; set; }
     public bool FreeHitPending { get; set; }
+    public int? PowerSurgeStartOver { get; set; }   // the over (1-based) the batting side's Power Surge began at; null = not taken
 
     public Match Match { get; set; } = null!;
     public Team BattingTeam { get; set; } = null!;

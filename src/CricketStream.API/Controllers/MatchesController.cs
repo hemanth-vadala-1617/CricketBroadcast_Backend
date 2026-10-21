@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Features.Matches;
+using CricketStream.Application.Features.Matches;
 using CricketStream.Contracts.Matches;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,6 +61,9 @@ public class MatchesController : ApiControllerBase {
 
     [HttpPost("{id:guid}/pause"), Authorize(Roles = Roles.Scoring)]
     public async Task<IActionResult> Pause(Guid id, [FromQuery] bool rain = true) => From(await _matches.PauseAsync(id, rain));
+
+    [HttpPost("{id:guid}/break"), Authorize(Roles = Roles.Scoring)]
+    public async Task<IActionResult> Break(Guid id, BreakRequest request) => From(await _matches.StartBreakAsync(id, request));
 
     [HttpPost("{id:guid}/resume"), Authorize(Roles = Roles.Scoring)]
     public async Task<IActionResult> Resume(Guid id) => From(await _matches.ResumeAsync(id));

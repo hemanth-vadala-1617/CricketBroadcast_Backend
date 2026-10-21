@@ -1,4 +1,4 @@
-﻿using System.Threading.RateLimiting;
+using System.Threading.RateLimiting;
 using CricketStream.API.Services;
 using CricketStream.Application;
 using CricketStream.Application.Interfaces;
@@ -39,8 +39,11 @@ static bool IsLocalOrPrivate(string origin)
     return b.Length == 4 && (b[0] == 10 || (b[0] == 192 && b[1] == 168) || (b[0] == 172 && b[1] is >= 16 and <= 31));
 }
 var isDev = builder.Environment.IsDevelopment();
+// Cors:AllowAnyOrigin = true lets a page from ANY address call the API (a phone, tablet or another laptop, whatever its IP).
+// The origin is echoed back rather than "*", so SignalR (which sends credentials) keeps working. Set it to false to go back to the allow-list above.
+var allowAnyOrigin = builder.Configuration.GetValue("Cors:AllowAnyOrigin", false);
 builder.Services.AddCors(o => o.AddPolicy("AllowFrontend", p => p
-    .SetIsOriginAllowed(origin => allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) || (isDev && IsLocalOrPrivate(origin)))
+    .SetIsOriginAllowed(origin => allowAnyOrigin || allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) || (isDev && IsLocalOrPrivate(origin)))
     .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 builder.Services.AddRateLimiter(o => {

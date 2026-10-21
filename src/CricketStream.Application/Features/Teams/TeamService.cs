@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Application.Interfaces;
 using CricketStream.Contracts.Teams;
 using CricketStream.Domain.Entities;
@@ -16,6 +16,7 @@ public class TeamService : ITeamService {
         Id = t.Id, Name = t.Name, ShortName = t.ShortName, Country = t.Country, LogoUrl = t.LogoUrl,
         PrimaryColor = t.PrimaryColor, SecondaryColor = t.SecondaryColor, IsActive = t.IsActive,
         PlayerCount = t.Players.Count(p => p.IsActive),
+        TournamentIds = _db.TournamentTeams.Where(x => x.TeamId == t.Id).Select(x => x.TournamentId).ToList(),
     });
 
     public Task<List<TeamDto>> GetAllAsync(bool includeInactive = false) =>
@@ -32,7 +33,10 @@ public class TeamService : ITeamService {
             Name = name, ShortName = r.ShortName.Trim().ToUpperInvariant(), Country = r.Country?.Trim() ?? "", LogoUrl = r.LogoUrl,
             PrimaryColor = r.PrimaryColor, SecondaryColor = r.SecondaryColor,
         };
+        var ids = r.TournamentIds.Distinct().ToList();
+        if (await _db.Tournaments.CountAsync(x => ids.Contains(x.Id)) != ids.Count) return Result<TeamDto>.Fail(Fail.Validation("One or more competitions were not found."));
         _db.Teams.Add(team);
+        foreach (var tid in ids) _db.TournamentTeams.Add(new TournamentTeam { TeamId = team.Id, TournamentId = tid });
         await _db.SaveChangesAsync();
         return Result<TeamDto>.Ok((await GetByIdAsync(team.Id))!);
     }
@@ -46,6 +50,11 @@ public class TeamService : ITeamService {
         if (await _db.Teams.AnyAsync(x => x.Name == name && x.Id != id)) return Result<TeamDto>.Fail(Fail.Conflict($"A team named '{name}' already exists."));
         t.Name = name; t.ShortName = r.ShortName.Trim().ToUpperInvariant(); t.Country = r.Country?.Trim() ?? "";
         t.LogoUrl = r.LogoUrl; t.PrimaryColor = r.PrimaryColor; t.SecondaryColor = r.SecondaryColor; t.UpdatedAt = DateTimeOffset.UtcNow;
+        var ids = r.TournamentIds.Distinct().ToList();
+        if (await _db.Tournaments.CountAsync(x => ids.Contains(x.Id)) != ids.Count) return Result<TeamDto>.Fail(Fail.Validation("One or more competitions were not found."));
+        var links = await _db.TournamentTeams.Where(x => x.TeamId == id).ToListAsync();
+        _db.TournamentTeams.RemoveRange(links.Where(l => !ids.Contains(l.TournamentId)));
+        foreach (var tid in ids.Where(i => links.All(l => l.TournamentId != i))) _db.TournamentTeams.Add(new TournamentTeam { TeamId = id, TournamentId = tid });
         await _db.SaveChangesAsync();
         return Result<TeamDto>.Ok((await GetByIdAsync(id))!);
     }

@@ -10,6 +10,7 @@ namespace CricketStream.Infrastructure.Persistence;
 public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbContext
 {
     public DbSet<Team> Teams => Set<Team>();
+    public DbSet<TournamentTeam> TournamentTeams => Set<TournamentTeam>();
     public DbSet<Player> Players => Set<Player>();
     public DbSet<Tournament> Tournaments => Set<Tournament>();
     public DbSet<Venue> Venues => Set<Venue>();
@@ -46,6 +47,11 @@ public class CricketDbContext : IdentityDbContext<IdentityUser>, ICricketDbConte
             e.HasIndex(t => t.Name).IsUnique();
             e.Property(t => t.Name).HasMaxLength(100);
             e.Property(t => t.ShortName).HasMaxLength(10);
+        });
+        b.Entity<TournamentTeam>(e => {
+            e.HasOne(x => x.Tournament).WithMany().HasForeignKey(x => x.TournamentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Team).WithMany().HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TournamentId, x.TeamId }).IsUnique();
         });
         b.Entity<Player>(e => {
             e.HasOne(p => p.CurrentTeam).WithMany(t => t.Players).HasForeignKey(p => p.CurrentTeamId).OnDelete(DeleteBehavior.SetNull);

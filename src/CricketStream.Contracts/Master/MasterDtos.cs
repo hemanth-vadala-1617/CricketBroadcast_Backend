@@ -43,6 +43,10 @@ public class MatchRulesDto {
     public int SessionsPerDay { get; set; } = 1;
     public int NewBallAfterOvers { get; set; }
     public int FollowOnMargin { get; set; } = 200;
+    public bool PowerSurgeEnabled { get; set; }
+    public int PowerSurgeOvers { get; set; } = 2;
+    public int PowerSurgeFromOver { get; set; } = 11;
+    public int PowerSurgeToOver { get; set; } = 16;
 }
 public class OverlayThemeDto {
     public Guid Id { get; set; }

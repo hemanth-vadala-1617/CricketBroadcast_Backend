@@ -11,6 +11,7 @@ public interface ICricketDbContext {
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<Match> Matches { get; }
     DbSet<MatchPlayer> MatchPlayers { get; }
+    DbSet<TournamentTeam> TournamentTeams { get; }
     DbSet<MatchStaff> MatchStaff { get; }
     DbSet<Innings> Innings { get; }
     DbSet<Over> Overs { get; }

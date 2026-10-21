@@ -48,4 +48,8 @@ public class WinProbabilityRequest {
     public int Draw { get; set; }
     public int Away { get; set; }
 }
+public class BreakRequest {
+    public string Kind { get; set; } = "Other";
+    public int? Minutes { get; set; }         // planned length; null = the usual length for that kind, 0 = open-ended
+}
 public class OversLostRequest { public int Overs { get; set; } }

@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Common;
+using CricketStream.Application.Common;
 using CricketStream.Contracts.Matches;
 namespace CricketStream.Application.Features.Matches;
 public interface IMatchService {
@@ -20,4 +20,5 @@ public interface IMatchService {
     Task<Result<MatchStateDto>> SetOversLostAsync(Guid id, OversLostRequest request);
     Task<Result<MatchStateDto>> PauseAsync(Guid id, bool rain);
     Task<Result<MatchStateDto>> ResumeAsync(Guid id);
+    Task<Result<MatchStateDto>> StartBreakAsync(Guid id, BreakRequest request);
 }

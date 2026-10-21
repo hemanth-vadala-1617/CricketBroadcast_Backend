@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CricketStream.Application.Common;
 using CricketStream.Application.Features.Matches;
 using CricketStream.Application.Interfaces;
@@ -78,6 +78,40 @@ public class ScoringService : IScoringService {
         if (inn.CurrentStrikerId is null || inn.CurrentNonStrikerId is null)
             return Result<MatchStateDto>.Fail(Fail.Unprocessable("Both batters must be at the crease."));
         (inn.CurrentStrikerId, inn.CurrentNonStrikerId) = (inn.CurrentNonStrikerId, inn.CurrentStrikerId);
+        return await _committer.CommitAsync(load.Value!.Match);
+    }
+
+    /// <summary>Power Surge: start it (from the next over if an over is under way), or cancel it before a ball has been bowled in it.</summary>
+    public async Task<Result<MatchStateDto>> PowerSurgeAsync(Guid matchId, PowerSurgeRequest request) {
+        var load = await InningsWork.LoadAsync(_db, matchId);
+        if (!load.Succeeded) return Result<MatchStateDto>.Fail(load.Error!);
+        var w = load.Value!; var inn = w.Innings; var rules = w.Match.MatchRules;
+        if (rules.IsTest) return Result<MatchStateDto>.Fail(Fail.Unprocessable("A Test match has no Power Surge."));
+        var ps = MatchStateBuilder.PowerSurgeState(inn, rules, inn.LegalBalls, inn.Status == CricketStream.Domain.Enums.InningsStatus.InProgress);
+        if (request.Start) {
+            if (inn.PowerSurgeStartOver is not null) return Result<MatchStateDto>.Fail(Fail.Unprocessable("The Power Surge has already been taken in this innings."));
+            if (!ps.CanStart) return Result<MatchStateDto>.Fail(Fail.Unprocessable(rules.PowerSurgeEnabled
+                ? $"The Power Surge can only start from over {ps.EarliestOver} to over {ps.LatestOver}."
+                : "There are not enough overs left in the innings for a Power Surge."));
+            inn.PowerSurgeStartOver = ps.NextStartOver;
+        } else {
+            if (!ps.CanCancel) return Result<MatchStateDto>.Fail(Fail.Unprocessable("The Power Surge can only be cancelled before a ball has been bowled in it."));
+            inn.PowerSurgeStartOver = null;
+        }
+        return await _committer.CommitAsync(w.Match);
+    }
+
+    public const int MaxSixMeters = 200;
+
+    /// <summary>Records how far the last six travelled (for the "six meter" graphic). Only the most recent ball, and only if it was a six.</summary>
+    public async Task<Result<MatchStateDto>> SetSixDistanceAsync(Guid matchId, SixDistanceRequest request) {
+        if (request.Meters is { } m && (m < 1 || m > MaxSixMeters))
+            return Result<MatchStateDto>.Fail(Fail.Validation($"The distance must be between 1 and {MaxSixMeters} metres."));
+        var load = await InningsWork.LoadAsync(_db, matchId);
+        if (!load.Succeeded) return Result<MatchStateDto>.Fail(load.Error!);
+        var last = load.Value!.Live.OrderBy(b => b.Sequence).LastOrDefault();
+        if (last is null || !last.IsSix) return Result<MatchStateDto>.Fail(Fail.Unprocessable("The last ball was not a six."));
+        last.SixDistance = request.Meters;
         return await _committer.CommitAsync(load.Value!.Match);
     }
 

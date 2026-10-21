@@ -1,4 +1,4 @@
-﻿using CricketStream.Application.Features.Scoring;
+using CricketStream.Application.Features.Scoring;
 using CricketStream.Contracts.Scoring;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +18,12 @@ public class ScoringController : ApiControllerBase {
 
     [HttpPost("match/{matchId:guid}/new-bowler")]
     public async Task<IActionResult> NewBowler(Guid matchId, NewBowlerRequest request) => From(await _scoring.NewBowlerAsync(matchId, request));
+
+    [HttpPost("match/{matchId:guid}/power-surge")]
+    public async Task<IActionResult> PowerSurge(Guid matchId, PowerSurgeRequest request) => From(await _scoring.PowerSurgeAsync(matchId, request));
+
+    [HttpPost("match/{matchId:guid}/six-distance")]
+    public async Task<IActionResult> SixDistance(Guid matchId, SixDistanceRequest request) => From(await _scoring.SetSixDistanceAsync(matchId, request));
 
     [HttpPost("match/{matchId:guid}/swap-strike")]
     public async Task<IActionResult> SwapStrike(Guid matchId) => From(await _scoring.SwapStrikeAsync(matchId));

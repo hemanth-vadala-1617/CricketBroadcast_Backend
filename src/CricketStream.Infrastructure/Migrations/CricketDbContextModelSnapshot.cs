@@ -17,7 +17,7 @@ namespace CricketStream.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.20")
+                .HasAnnotation("ProductVersion", "9.0.21")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -183,6 +183,10 @@ namespace CricketStream.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("session");
 
+                    b.Property<int?>("SixDistance")
+                        .HasColumnType("integer")
+                        .HasColumnName("six_distance");
+
                     b.Property<Guid>("StrikerId")
                         .HasColumnType("uuid")
                         .HasColumnName("striker_id");
@@ -339,6 +343,10 @@ namespace CricketStream.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("penalty_runs");
 
+                    b.Property<int?>("PowerSurgeStartOver")
+                        .HasColumnType("integer")
+                        .HasColumnName("power_surge_start_over");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
@@ -397,6 +405,18 @@ namespace CricketStream.Infrastructure.Migrations
                     b.Property<Guid>("AwayTeamId")
                         .HasColumnType("uuid")
                         .HasColumnName("away_team_id");
+
+                    b.Property<int?>("BreakKind")
+                        .HasColumnType("integer")
+                        .HasColumnName("break_kind");
+
+                    b.Property<int>("BreakPlannedSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("break_planned_seconds");
+
+                    b.Property<DateTimeOffset?>("BreakStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("break_started_at");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -660,6 +680,22 @@ namespace CricketStream.Infrastructure.Migrations
                     b.Property<int>("OversPerInnings")
                         .HasColumnType("integer")
                         .HasColumnName("overs_per_innings");
+
+                    b.Property<bool>("PowerSurgeEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("power_surge_enabled");
+
+                    b.Property<int>("PowerSurgeFromOver")
+                        .HasColumnType("integer")
+                        .HasColumnName("power_surge_from_over");
+
+                    b.Property<int>("PowerSurgeOvers")
+                        .HasColumnType("integer")
+                        .HasColumnName("power_surge_overs");
+
+                    b.Property<int>("PowerSurgeToOver")
+                        .HasColumnType("integer")
+                        .HasColumnName("power_surge_to_over");
 
                     b.Property<int>("PowerplayOvers")
                         .HasColumnType("integer")
@@ -1169,6 +1205,42 @@ namespace CricketStream.Infrastructure.Migrations
                         .HasDatabaseName("ix_tournaments_overlay_theme_id");
 
                     b.ToTable("tournaments", (string)null);
+                });
+
+            modelBuilder.Entity("CricketStream.Domain.Entities.TournamentTeam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("team_id");
+
+                    b.Property<Guid>("TournamentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tournament_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tournament_teams");
+
+                    b.HasIndex("TeamId")
+                        .HasDatabaseName("ix_tournament_teams_team_id");
+
+                    b.HasIndex("TournamentId", "TeamId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tournament_teams_tournament_id_team_id");
+
+                    b.ToTable("tournament_teams", (string)null);
                 });
 
             modelBuilder.Entity("CricketStream.Domain.Entities.Venue", b =>
@@ -1761,6 +1833,27 @@ namespace CricketStream.Infrastructure.Migrations
                         .HasForeignKey("OverlayThemeId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_tournaments_overlay_themes_overlay_theme_id");
+                });
+
+            modelBuilder.Entity("CricketStream.Domain.Entities.TournamentTeam", b =>
+                {
+                    b.HasOne("CricketStream.Domain.Entities.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tournament_teams_teams_team_id");
+
+                    b.HasOne("CricketStream.Domain.Entities.Tournament", "Tournament")
+                        .WithMany()
+                        .HasForeignKey("TournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tournament_teams_tournaments_tournament_id");
+
+                    b.Navigation("Team");
+
+                    b.Navigation("Tournament");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

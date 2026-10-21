@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Entities;
+using CricketStream.Domain.Entities;
 using CricketStream.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +52,7 @@ public static class DatabaseSeeder
         var presets = new[]
         {
             new MatchRules { Name = "T20", OversPerInnings = 20, MaxOversPerBowler = 4, PowerplayOvers = 6 },
+            new MatchRules { Name = "BBL (Power Surge)", OversPerInnings = 20, MaxOversPerBowler = 4, PowerplayOvers = 6, PowerSurgeEnabled = true, PowerSurgeOvers = 2, PowerSurgeFromOver = 11, PowerSurgeToOver = 16 },
             new MatchRules { Name = "T10", OversPerInnings = 10, MaxOversPerBowler = 2, PowerplayOvers = 3 },
             new MatchRules { Name = "ODI", OversPerInnings = 50, MaxOversPerBowler = 10, PowerplayOvers = 10 },
             new MatchRules

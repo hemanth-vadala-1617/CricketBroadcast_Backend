@@ -332,6 +332,27 @@ public class MatchService : IMatchService {
         if (match is null) return NotFound();
         if (match.Status is not (MatchStatus.Live or MatchStatus.InningsBreak)) return Fail_(ErrorKind.Unprocessable, "Only a live match can be paused.");
         match.Status = rain ? MatchStatus.RainDelay : MatchStatus.Paused;
+        match.BreakKind = rain ? BreakKind.RainDelay : BreakKind.Other; match.BreakStartedAt = DateTimeOffset.UtcNow; match.BreakPlannedSeconds = 0;
+        return await _committer.CommitAsync(match);
+    }
+
+    /// <summary>The usual length of each kind of break, in minutes (0 = no fixed length).</summary>
+    public static int UsualMinutes(BreakKind k) => k switch {
+        BreakKind.StrategicTimeout => 3, BreakKind.DrinksBreak => 5, BreakKind.InjuryBreak => 0, BreakKind.Lunch => 40, BreakKind.Tea => 20, _ => 0,
+    };
+
+    public async Task<Result<MatchStateDto>> StartBreakAsync(Guid id, BreakRequest request) {
+        if (!Enum.TryParse<BreakKind>(request.Kind, true, out var kind)) return Fail_(ErrorKind.Validation, "Unknown kind of break.");
+        if (request.Minutes is < 0 or > 600) return Fail_(ErrorKind.Validation, "The break length must be between 0 and 600 minutes.");
+        var match = await _db.Matches.Include(m => m.MatchRules).FirstOrDefaultAsync(m => m.Id == id);
+        if (match is null) return NotFound();
+        if (match.Status is not (MatchStatus.Live or MatchStatus.InningsBreak)) return Fail_(ErrorKind.Unprocessable, "Only a live match can be paused.");
+        var test = match.MatchRules.IsTest;
+        if (BreakKinds.TestOnly(kind) && !test) return Fail_(ErrorKind.Unprocessable, $"{BreakKinds.Label(kind)} is a Test-match break.");
+        if (BreakKinds.LimitedOversOnly(kind) && test) return Fail_(ErrorKind.Unprocessable, $"{BreakKinds.Label(kind)} is not used in a Test match.");
+        match.Status = kind == BreakKind.RainDelay ? MatchStatus.RainDelay : MatchStatus.Paused;
+        match.BreakKind = kind; match.BreakStartedAt = DateTimeOffset.UtcNow;
+        match.BreakPlannedSeconds = (request.Minutes ?? UsualMinutes(kind)) * 60;
         return await _committer.CommitAsync(match);
     }
 
@@ -341,6 +362,7 @@ public class MatchService : IMatchService {
         if (match.Status is not (MatchStatus.RainDelay or MatchStatus.Paused)) return Fail_(ErrorKind.Unprocessable, "The match is not paused.");
         var latest = match.Innings.OrderBy(i => i.InningsNumber).LastOrDefault();
         match.Status = latest is { Status: InningsStatus.Completed } ? MatchStatus.InningsBreak : MatchStatus.Live;
+        match.BreakKind = null; match.BreakStartedAt = null; match.BreakPlannedSeconds = 0;
         return await _committer.CommitAsync(match);
     }
 }

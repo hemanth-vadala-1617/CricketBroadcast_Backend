@@ -1,4 +1,4 @@
-﻿namespace CricketStream.Contracts.Scoring;
+namespace CricketStream.Contracts.Scoring;
 
 public class WicketRequest {
     public string DismissalType { get; set; } = string.Empty;
@@ -17,6 +17,8 @@ public class ScoreBallRequest {
     public bool IsBoundary { get; set; }
     public WicketRequest? Wicket { get; set; }
 }
+public class PowerSurgeRequest { public bool Start { get; set; } = true; }   // false cancels a surge that has not had a ball bowled yet
+public class SixDistanceRequest { public int? Meters { get; set; } }   // null clears it
 public class NewBatterRequest { public Guid PlayerId { get; set; } }
 public class NewBowlerRequest { public Guid PlayerId { get; set; } public bool ReplaceMidOver { get; set; } }
 public class RetireRequest { public Guid PlayerId { get; set; } public Guid? NewBatterId { get; set; } public string? Reason { get; set; } }

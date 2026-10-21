@@ -127,6 +127,323 @@ public class ScoringTests
         Assert.Equal(0, s.Scorecard[0].Bowling.Single(x => x.PlayerId == f.AusXI[10].Id).Runs);
     }
 
+    // ---------- sixes in a row ----------
+    [Fact]
+    public async Task Consecutive_sixes_by_the_same_batter_build_a_streak_that_a_wide_does_not_break()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var s = await f.Ball(bat: 6, boundary: true);
+        Assert.Equal(1, s.LastBall!.SixStreak);
+        s = await f.Ball(bat: 6, boundary: true);
+        Assert.Equal(2, s.LastBall!.SixStreak);
+        await f.Ball(extras: "Wide");   // a plain wide: no runs run, same batter still on strike
+        s = await f.Ball(bat: 6, boundary: true);
+        Assert.Equal(3, s.LastBall!.SixStreak);
+        s = await f.Ball(bat: 4, boundary: true);
+        Assert.Equal(0, s.LastBall!.SixStreak);
+        s = await f.Ball(bat: 6, boundary: true);
+        Assert.Equal(1, s.LastBall!.SixStreak);
+    }
+
+    [Fact]
+    public async Task A_dot_ball_or_a_single_ends_the_streak_and_undo_restores_it()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Ball(bat: 6, boundary: true);
+        await f.Ball(bat: 6, boundary: true);
+        var s = await f.Ball(bat: 1);
+        Assert.Equal(0, s.LastBall!.SixStreak);
+        s = await f.Undo();
+        Assert.Equal(2, s.LastBall!.SixStreak);
+    }
+
+    // ---------- milestones & six distance ----------
+    [Fact]
+    public async Task A_fifty_is_announced_once_on_the_ball_that_reaches_it()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        MatchStateDto s = null!;
+        for (var i = 0; i < 6; i++) s = await f.Ball(bat: 6, boundary: true);      // over 1: A on 36, strike passes to B
+        await f.NewBowler(f.AusXI[9]);
+        await f.Dots(6);                                                             // over 2: B faces
+        await f.NewBowler(f.AusXI[8]);                                               // over 3: A is back on strike
+        s = await f.Ball(bat: 6, boundary: true); Assert.Empty(s.Milestones);       // 42
+        s = await f.Ball(bat: 6, boundary: true); Assert.Empty(s.Milestones);       // 48
+        s = await f.Ball(bat: 6, boundary: true);                                   // 54
+        var m = Assert.Single(s.Milestones);
+        Assert.Equal(("Runs", 50), (m.Kind, m.Value));
+        Assert.Equal(f.IndiaXI[0].DisplayName, m.Name);
+        s = await f.Ball(bat: 1);
+        Assert.Empty(s.Milestones);
+    }
+
+    [Fact]
+    public async Task A_maiden_over_is_announced_on_its_last_ball()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        MatchStateDto s = null!;
+        for (var i = 0; i < 5; i++) { s = await f.Ball(); Assert.Empty(s.Milestones); }
+        s = await f.Ball();
+        var m = Assert.Single(s.Milestones);
+        Assert.Equal(("Maiden", 1), (m.Kind, m.Value));
+        Assert.Equal(f.AusXI[10].DisplayName, m.Name);
+    }
+
+    [Fact]
+    public async Task An_over_with_runs_is_not_a_maiden()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Ball(bat: 1);
+        var s = await f.Dots(5);
+        Assert.Empty(s.Milestones);
+    }
+
+    [Fact]
+    public async Task A_fifth_wicket_for_the_bowler_is_a_five_for()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        MatchStateDto s = null!;
+        for (var i = 0; i < 4; i++) { s = await f.Ball(wicket: f.Wkt("Bowled")); Assert.DoesNotContain(s.Milestones, x => x.Kind == "FiveWickets"); }
+        Assert.Contains(s.Milestones, x => x.Kind == "FourWickets" && x.Value == 4);                // the 4th wicket is a four-for
+        s = await f.Ball(wicket: f.Wkt("Bowled"));
+        Assert.Contains(s.Milestones, x => x.Kind == "FiveWickets" && x.Value == 5);
+    }
+
+    [Fact]
+    public async Task Six_distance_attaches_to_the_last_ball_only_when_it_was_a_six()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var notSix = await f.Scoring.SetSixDistanceAsync(f.MatchId, new SixDistanceRequest { Meters = 90 });
+        Assert.False(notSix.Succeeded);
+        await f.Ball(bat: 6, boundary: true);
+        var ok = await f.Scoring.SetSixDistanceAsync(f.MatchId, new SixDistanceRequest { Meters = 94 });
+        Assert.True(ok.Succeeded);
+        Assert.Equal(94, ok.Value!.LastBall!.SixDistance);
+        Assert.False((await f.Scoring.SetSixDistanceAsync(f.MatchId, new SixDistanceRequest { Meters = 500 })).Succeeded);
+        var cleared = await f.Scoring.SetSixDistanceAsync(f.MatchId, new SixDistanceRequest { Meters = null });
+        Assert.Null(cleared.Value!.LastBall!.SixDistance);
+        var next = await f.Ball(bat: 1);
+        Assert.Null(next.LastBall!.SixDistance);
+    }
+
+    // ---------- hat-tricks ----------
+    [Fact]
+    public async Task Three_fours_in_a_row_by_one_batter_is_a_four_streak_of_three()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var s = await f.Ball(bat: 4, boundary: true); Assert.Equal(1, s.LastBall!.FourStreak);
+        s = await f.Ball(bat: 4, boundary: true); Assert.Equal(2, s.LastBall!.FourStreak);
+        await f.Ball(extras: "Wide");
+        s = await f.Ball(bat: 4, boundary: true); Assert.Equal(3, s.LastBall!.FourStreak);
+        s = await f.Ball(bat: 6, boundary: true);
+        Assert.Equal(0, s.LastBall!.FourStreak);
+    }
+
+    [Fact]
+    public async Task Three_wickets_in_three_deliveries_by_one_bowler_is_a_hat_trick()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var s = await f.Ball(wicket: f.Wkt("Bowled")); Assert.Equal(1, s.LastBall!.WicketStreak);
+        s = await f.Ball(wicket: f.Wkt("Bowled")); Assert.Equal(2, s.LastBall!.WicketStreak);
+        await f.Ball(extras: "Wide");                                                   // a wide is not a delivery that breaks it
+        s = await f.Ball(wicket: f.Wkt("Caught", fielder: f.AusXI[0].Id)); Assert.Equal(3, s.LastBall!.WicketStreak);
+        s = await f.Ball(bat: 1);
+        Assert.Equal(0, s.LastBall!.WicketStreak);
+    }
+
+    [Fact]
+    public async Task A_dot_ball_or_a_run_out_breaks_the_wicket_streak()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Ball(wicket: f.Wkt("Bowled"));
+        await f.Ball();
+        var s = await f.Ball(wicket: f.Wkt("Bowled"));
+        Assert.Equal(1, s.LastBall!.WicketStreak);
+        s = await f.Ball(wicket: f.Wkt("RunOut", fielder: f.AusXI[0].Id));
+        Assert.Equal(0, s.LastBall!.WicketStreak);                                      // a run out is not the bowler's wicket
+    }
+
+    // ---------- BBL Power Surge ----------
+    private static MatchRules BblRules() => new() { Name = "BBL", OversPerInnings = 20, MaxOversPerBowler = 0, PowerplayOvers = 6, PowerSurgeEnabled = true, PowerSurgeOvers = 2, PowerSurgeFromOver = 11, PowerSurgeToOver = 16 };
+
+    private static async Task<MatchStateDto> BowlOvers(MatchFixture f, int overs)
+    {
+        MatchStateDto s = f.Last;
+        for (var o = 0; o < overs; o++) { s = await f.Dots(6); s = await f.NewBowler(f.AusXI[o % 2 == 0 ? 9 : 10]); }
+        return s;
+    }
+
+    [Fact]
+    public async Task With_bbl_rules_the_power_surge_cannot_start_before_over_eleven()
+    {
+        using var f = await MatchFixture.CreateAsync(BblRules());
+        var ps = f.Last.Innings!.PowerSurge!;
+        Assert.False(ps.CanStart); Assert.Equal(11, ps.EarliestOver); Assert.Equal(16, ps.LatestOver);
+        Assert.False((await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true })).Succeeded);
+    }
+
+    [Fact]
+    public async Task In_a_plain_t20_the_power_surge_can_be_started_any_time_once_for_two_overs()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var ps = f.Last.Innings!.PowerSurge!;
+        Assert.True(ps.CanStart); Assert.Equal(2, ps.Overs);
+        var r = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true });
+        Assert.True(r.Succeeded);
+        Assert.True(r.Value!.Innings!.PowerSurge!.Active);                   // between overs: on straight away
+        Assert.Equal(1, r.Value.Innings.PowerSurge.StartOver);
+        Assert.False((await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true })).Succeeded);
+    }
+
+    [Fact]
+    public async Task A_test_match_has_no_power_surge()
+    {
+        using var f = await MatchFixture.CreateAsync(MatchFixture.TestRules());
+        Assert.Null(f.Last.Innings!.PowerSurge);
+        Assert.False((await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true })).Succeeded);
+    }
+
+    [Fact]
+    public async Task Started_in_the_middle_of_an_over_the_surge_waits_for_the_next_over_and_can_be_cancelled_until_then()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Dots(2);
+        var r = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true });
+        var ps = r.Value!.Innings!.PowerSurge!;
+        Assert.True(ps.Pending); Assert.False(ps.Active); Assert.Equal(2, ps.StartOver); Assert.True(ps.CanCancel);
+        await f.Dots(3); var s = await f.Dots(1);                            // over 1 is complete (a new bowler is needed)
+        s = await f.NewBowler(f.AusXI[9]);
+        Assert.True(s.Innings!.PowerSurge!.Active); Assert.False(s.Innings.PowerSurge.Pending); Assert.Equal(2, s.Innings.PowerSurge.OversLeft);
+        var cancelled = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = false });
+        Assert.True(cancelled.Succeeded);                                    // nothing bowled in it yet
+        Assert.True(cancelled.Value!.Innings!.PowerSurge!.CanStart);
+    }
+
+    [Fact]
+    public async Task Power_surge_runs_for_two_overs_then_ends_and_can_only_be_taken_once()
+    {
+        using var f = await MatchFixture.CreateAsync(BblRules());
+        var s = await BowlOvers(f, 10);                                  // ten overs done, between overs
+        Assert.True(s.Innings!.PowerSurge!.CanStart);
+        var r = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true });
+        Assert.True(r.Succeeded);
+        var ps = r.Value!.Innings!.PowerSurge!;
+        Assert.True(ps.Active); Assert.Equal(11, ps.StartOver); Assert.Equal(2, ps.OversLeft);
+        Assert.False((await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true })).Succeeded);   // once only
+
+        s = await f.Ball();                                              // a ball into over 11: mid-over, so no cancel
+        Assert.False(s.Innings!.PowerSurge!.CanCancel);
+        await f.Dots(5); s = await f.NewBowler(f.AusXI[9]);
+        Assert.True(s.Innings!.PowerSurge!.Active); Assert.Equal(1, s.Innings.PowerSurge.OversLeft);
+        await f.Dots(6); s = await f.NewBowler(f.AusXI[10]);
+        Assert.False(s.Innings!.PowerSurge!.Active); Assert.True(s.Innings.PowerSurge.Used);
+    }
+
+    [Fact]
+    public async Task Power_surge_can_be_cancelled_before_a_ball_is_bowled_in_it()
+    {
+        using var f = await MatchFixture.CreateAsync(BblRules());
+        await BowlOvers(f, 10);
+        var started = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = true });
+        Assert.True(started.Value!.Innings!.PowerSurge!.CanCancel);
+        var r = await f.Scoring.PowerSurgeAsync(f.MatchId, new PowerSurgeRequest { Start = false });
+        Assert.True(r.Succeeded);
+        Assert.True(r.Value!.Innings!.PowerSurge!.CanStart);
+        Assert.False(r.Value.Innings.PowerSurge.Used);
+    }
+
+    // ---------- ducks ----------
+    [Fact]
+    public async Task Out_to_the_first_ball_faced_for_nought_is_a_golden_duck()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var s = await f.Ball(wicket: f.Wkt("Bowled"));
+        Assert.Equal("Golden", s.LastBall!.DuckType);
+        Assert.Equal(f.IndiaXI[0].DisplayName, s.LastBall.DuckName);
+    }
+
+    [Fact]
+    public async Task Out_for_nought_after_facing_more_balls_is_a_plain_duck_and_runs_make_it_none()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        await f.Dots(2);
+        var s = await f.Ball(wicket: f.Wkt("Bowled"));
+        Assert.Equal("Duck", s.LastBall!.DuckType);                          // the striker faced 3 balls, no runs
+
+        using var g = await MatchFixture.CreateAsync();
+        await g.Ball(bat: 1); await g.Ball(bat: 1);                          // striker scores, then they swap back
+        var t = await g.Ball(wicket: g.Wkt("Bowled"));
+        Assert.Null(t.LastBall!.DuckType);                                   // he had runs
+    }
+
+    [Fact]
+    public async Task A_non_striker_run_out_before_facing_a_ball_is_a_diamond_duck()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var nonStriker = f.IndiaXI[1].Id;
+        var s = await f.Ball(wicket: f.Wkt("RunOut", dismissed: nonStriker, fielder: f.AusXI[0].Id));
+        Assert.Equal("Diamond", s.LastBall!.DuckType);
+    }
+
+    [Fact]
+    public async Task A_ball_with_no_wicket_has_no_duck()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var s = await f.Ball();
+        Assert.Null(s.LastBall!.DuckType);
+    }
+
+    // ---------- breaks ----------
+    [Theory]
+    [InlineData("StrategicTimeout", "Strategic timeout", 180)]
+    [InlineData("DrinksBreak", "Drinks break", 300)]
+    [InlineData("InjuryBreak", "Injury break", 0)]
+    [InlineData("BadLight", "Bad light", 0)]
+    public async Task A_break_pauses_play_with_its_label_and_usual_length_and_resume_ends_it(string kind, string label, int seconds)
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var r = await f.Matches.StartBreakAsync(f.MatchId, new BreakRequest { Kind = kind });
+        Assert.True(r.Succeeded, r.Error?.Message);
+        Assert.Equal(label, r.Value!.Break!.Label);
+        Assert.Equal(seconds, r.Value.Break.PlannedSeconds);
+        Assert.False(r.Value.Actions.CanScoreBall);                          // scoring is locked during a break
+        var back = await f.Matches.ResumeAsync(f.MatchId);
+        Assert.Null(back.Value!.Break);
+        Assert.Equal("Live", back.Value.Status);
+        Assert.True(back.Value.Actions.CanScoreBall);
+    }
+
+    [Fact]
+    public async Task Rain_delay_keeps_its_status_and_a_custom_length_is_used()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        var r = await f.Matches.StartBreakAsync(f.MatchId, new BreakRequest { Kind = "RainDelay", Minutes = 45 });
+        Assert.Equal("RainDelay", r.Value!.Status);
+        Assert.Equal(45 * 60, r.Value.Break!.PlannedSeconds);
+        Assert.Equal("RainDelay", r.Value.Break.Kind);
+    }
+
+    [Fact]
+    public async Task Lunch_and_tea_are_test_breaks_and_the_strategic_timeout_is_not()
+    {
+        using var t20 = await MatchFixture.CreateAsync();
+        Assert.False((await t20.Matches.StartBreakAsync(t20.MatchId, new BreakRequest { Kind = "Lunch" })).Succeeded);
+        Assert.False((await t20.Matches.StartBreakAsync(t20.MatchId, new BreakRequest { Kind = "Stumps" })).Succeeded);
+        using var test = await MatchFixture.CreateAsync(MatchFixture.TestRules());
+        Assert.True((await test.Matches.StartBreakAsync(test.MatchId, new BreakRequest { Kind = "Lunch" })).Succeeded);
+        await test.Matches.ResumeAsync(test.MatchId);
+        Assert.False((await test.Matches.StartBreakAsync(test.MatchId, new BreakRequest { Kind = "StrategicTimeout" })).Succeeded);
+    }
+
+    [Fact]
+    public async Task An_unknown_break_or_a_silly_length_is_rejected()
+    {
+        using var f = await MatchFixture.CreateAsync();
+        Assert.False((await f.Matches.StartBreakAsync(f.MatchId, new BreakRequest { Kind = "Nap" })).Succeeded);
+        Assert.False((await f.Matches.StartBreakAsync(f.MatchId, new BreakRequest { Kind = "Tea", Minutes = 9999 })).Succeeded);
+        Assert.Null(f.Last.Break);
+    }
+
     // ---------- wickets ----------
     [Fact]
     public async Task Bowled_credits_the_bowler_and_brings_in_the_next_batter_on_strike()

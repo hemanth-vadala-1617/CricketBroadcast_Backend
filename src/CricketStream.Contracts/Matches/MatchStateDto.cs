@@ -31,6 +31,13 @@ public class MatchStateDto {
 
     public LastBallDto? LastBall { get; set; }
 
+    /// <summary>The stoppage in progress (strategic timeout, drinks break, lunch...), or null while play is on.</summary>
+    public BreakDto? Break { get; set; }
+
+    /// <summary>Milestones reached ON THE LAST BALL (a fifty, a hundred, a maiden over, a five-wicket haul). Each has an id that is new
+    /// for every occurrence, so the overlay shows each once. Empty most of the time.</summary>
+    public List<MilestoneDto> Milestones { get; set; } = new();
+
     /// <summary>The most recent penalty award (runs added without a ball). The overlay shows a burst for each new one.</summary>
     public LastPenaltyDto? LastPenalty { get; set; }
     public List<OverTimelineDto> Timeline { get; set; } = new();
@@ -84,6 +91,7 @@ public class InningsStateDto {
     public PartnershipDto Partnership { get; set; } = new();
     public bool FreeHit { get; set; }
     public bool Powerplay { get; set; }
+    public PowerSurgeDto? PowerSurge { get; set; }   // null when the rules have no Power Surge
     public bool NewBallDue { get; set; }
     public BatterDto? Striker { get; set; }
     public BatterDto? NonStriker { get; set; }
@@ -91,6 +99,20 @@ public class InningsStateDto {
 }
 
 public class PartnershipDto { public int Runs { get; set; } public int Balls { get; set; } }
+
+public class PowerSurgeDto {
+    public bool Active { get; set; }           // the surge overs are being bowled now
+    public bool Used { get; set; }             // it has been taken (active or finished)
+    public bool CanStart { get; set; }         // between overs, in the allowed window, not taken yet
+    public bool CanCancel { get; set; }        // just started (or still waiting for the next over), nothing bowled in it yet
+    public bool Pending { get; set; }          // started in the middle of an over: it begins with the next over
+    public int EarliestOver { get; set; }      // the window it may be started in
+    public int LatestOver { get; set; }
+    public int NextStartOver { get; set; }     // the over a surge started right now would begin at
+    public int StartOver { get; set; }         // the over it began at (0 = not taken)
+    public int Overs { get; set; }             // length of the block
+    public int OversLeft { get; set; }         // overs of it still to bowl while active
+}
 
 public class BatterDto {
     public Guid PlayerId { get; set; }
@@ -142,11 +164,34 @@ public class InningsSummaryDto {
     public string Text { get; set; } = string.Empty;  // "1st Inng.: 198-10"
 }
 
+public class BreakDto {
+    public string Kind { get; set; } = string.Empty;     // StrategicTimeout, DrinksBreak, InjuryBreak, RainDelay, BadLight, WetOutfield, Lunch, Tea, Stumps, Other
+    public string Label { get; set; } = string.Empty;    // "Strategic timeout"
+    public int PlannedSeconds { get; set; }              // 0 = open-ended
+    public int ElapsedSeconds { get; set; }              // how long it has lasted when this state was built (clients add the time since they received it)
+}
+
+public class MilestoneDto {
+    public string Id { get; set; } = string.Empty;       // ballId + kind + value: unique per occurrence
+    public string Kind { get; set; } = string.Empty;     // Runs (batter reached Value), Maiden, FourWickets, FiveWickets
+    public int Value { get; set; }                       // Runs: 50, 100, 150...; FiveWickets: wickets taken; Maiden: maidens so far
+    public Guid PlayerId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? PhotoUrl { get; set; }
+    public string Detail { get; set; } = string.Empty;   // "104 (61) 9x4 4x6" / "1-0-6-0"  / "5-24 (3.4)"
+}
+
 public class LastBallDto {
     public Guid BallId { get; set; }
     public string Label { get; set; } = string.Empty; // "0", "4", "W", "WD", "NB+2"
     public string Kind { get; set; } = string.Empty;  // Dot, Runs, Four, Six, Wicket, Wide, NoBall, Bye, LegBye
     public int Runs { get; set; }
+    public int? SixDistance { get; set; }            // metres the six travelled, when the scorer has entered it
+    public int SixStreak { get; set; }
+    public string? DuckType { get; set; }            // when the batter dismissed on this ball has no runs: Duck, Golden (out to the first ball he faced) or Diamond (out without facing a ball)
+    public string? DuckName { get; set; }            // that batter's name
+    public int FourStreak { get; set; }              // fours in a row by this batter ending with this ball (0 unless it was a four)
+    public int WicketStreak { get; set; }            // wickets in a row by this bowler ending with this ball (3 = hat-trick; 0 unless it was a bowler's wicket)               // sixes in a row by this batter ending with this ball (0 unless it was a six)
 }
 
 public class OverTimelineDto {

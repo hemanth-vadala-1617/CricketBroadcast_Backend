@@ -1,4 +1,4 @@
-﻿using CricketStream.Domain.Common;
+using CricketStream.Domain.Common;
 using CricketStream.Domain.Enums;
 namespace CricketStream.Domain.Entities;
 /// <summary>One delivery. Immutable once written, except IsVoided (undo). StrikerId/NonStrikerId/BowlerId
@@ -20,6 +20,7 @@ public class Ball : BaseEntity {
     public bool IsBoundary { get; set; }
     public bool IsFour { get; set; }
     public bool IsSix { get; set; }
+    public int? SixDistance { get; set; }        // metres, entered by the scorer after a six for the "six meter" graphic
     public bool IsLegal { get; set; }
     public bool IsFreeHit { get; set; }
     public bool IsWicket { get; set; }

@@ -21,6 +21,11 @@ public class Match : BaseEntity {
     public string? ResultText { get; set; }
     public Guid? CurrentInningsId { get; set; }
 
+    // The current stoppage (strategic timeout, drinks, lunch...), set while the match is Paused or in a RainDelay
+    public BreakKind? BreakKind { get; set; }
+    public DateTimeOffset? BreakStartedAt { get; set; }
+    public int BreakPlannedSeconds { get; set; }     // 0 = no fixed length (the overlay counts up instead of down)
+
     // Test-match clock (Day 3 : Session 1, overs left today)
     public int CurrentDay { get; set; } = 1;
     public int CurrentSession { get; set; } = 1;

@@ -118,6 +118,11 @@ public class MatchRulesDtoValidator : AbstractValidator<MatchRulesDto> {
         RuleFor(x => x.OversPerInnings).GreaterThanOrEqualTo(0);
         RuleFor(x => x.MaxOversPerBowler).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PowerplayOvers).GreaterThanOrEqualTo(0);
+        When(x => x.PowerSurgeEnabled, () => {
+            RuleFor(x => x.PowerSurgeOvers).InclusiveBetween(1, 5);
+            RuleFor(x => x.PowerSurgeFromOver).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.PowerSurgeToOver).GreaterThanOrEqualTo(x => x.PowerSurgeFromOver).WithMessage("The latest start over is before the earliest.");
+        });
         RuleFor(x => x.WideRuns).InclusiveBetween(0, 5);
         RuleFor(x => x.NoBallRuns).InclusiveBetween(0, 5);
         RuleFor(x => x.InningsPerSide).InclusiveBetween(1, 2);

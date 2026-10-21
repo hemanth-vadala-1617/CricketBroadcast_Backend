@@ -115,6 +115,91 @@ public static class MatchStateBuilder
         };
     }
 
+    /// <summary>Sixes in a row by the batter of the last ball, counting back from it. A wide is skipped (it is not a delivery to the batter);
+    /// any other ball by him that was not a six, or a ball by someone else, ends the run. 0 when the last ball was not a six.</summary>
+    public static int SixStreak(IReadOnlyList<Ball> balls)
+    {
+        if (balls.Count == 0 || !balls[^1].IsSix) return 0;
+        var striker = balls[^1].StrikerId;
+        var count = 0;
+        for (var i = balls.Count - 1; i >= 0; i--)
+        {
+            var b = balls[i];
+            if (b.ExtrasType == ExtrasType.Wide && !b.IsSix) continue;
+            if (!b.IsSix || b.StrikerId != striker) break;
+            count++;
+        }
+        return count;
+    }
+
+    /// <summary>The Power Surge block for the innings: when it can start, whether it is on now, and how much is left.
+    /// Every limited-overs match has one button for it. With BBL-style rules (PowerSurgeEnabled) it may only start inside the rule's window;
+    /// otherwise it can be taken any time, once per innings, for 2 overs. A start in the middle of an over takes effect from the next over (Pending until then).</summary>
+    public static PowerSurgeDto PowerSurgeState(Innings inn, MatchRules rules, int legalBalls, bool inProgress)
+    {
+        var bpo = Math.Max(1, rules.BallsPerOver);
+        var overs = rules.PowerSurgeOvers > 0 ? rules.PowerSurgeOvers : 2;
+        var overNow = legalBalls / bpo + 1;                    // the over being bowled, or about to start
+        var atBoundary = legalBalls % bpo == 0;
+        var (from, to) = PowerSurgeWindow(rules, overs);
+        var nextStart = atBoundary ? overNow : overNow + 1;    // where a surge started now would begin
+        var start = inn.PowerSurgeStartOver;
+        var used = start is not null;
+        var active = inProgress && used && overNow >= start!.Value && overNow < start.Value + overs;
+        var pending = inProgress && used && overNow < start!.Value;
+        return new PowerSurgeDto
+        {
+            Used = used, Active = active, Pending = pending, StartOver = start ?? 0, Overs = overs,
+            OversLeft = active ? start!.Value + overs - overNow : 0,
+            CanStart = inProgress && !used && nextStart >= from && nextStart <= to,
+            CanCancel = inProgress && used && (pending || (atBoundary && overNow == start!.Value)),
+            EarliestOver = from, LatestOver = to, NextStartOver = nextStart,
+        };
+    }
+
+    /// <summary>The overs a surge may begin in: the rule's window for BBL-style rules, otherwise anywhere it still fits in the innings.</summary>
+    public static (int From, int To) PowerSurgeWindow(MatchRules rules, int overs)
+    {
+        if (rules.PowerSurgeEnabled) return (Math.Max(1, rules.PowerSurgeFromOver), Math.Max(rules.PowerSurgeFromOver, rules.PowerSurgeToOver));
+        return (1, rules.OversPerInnings > 0 ? Math.Max(1, rules.OversPerInnings - overs + 1) : int.MaxValue);
+    }
+
+    /// <summary>Fours in a row by the batter of the last ball (same rules as <see cref="SixStreak"/>: a wide is skipped, anything else ends the run).</summary>
+    public static int FourStreak(IReadOnlyList<Ball> balls)
+    {
+        if (balls.Count == 0 || !balls[^1].IsFour) return 0;
+        var striker = balls[^1].StrikerId;
+        var count = 0;
+        for (var i = balls.Count - 1; i >= 0; i--)
+        {
+            var b = balls[i];
+            if (b.ExtrasType == ExtrasType.Wide && !b.IsFour) continue;
+            if (!b.IsFour || b.StrikerId != striker) break;
+            count++;
+        }
+        return count;
+    }
+
+    private static bool CreditedToBowler(Ball b) => b.IsWicket && b.Dismissal is { } d && CricketRules.CreditsBowler(d.DismissalType);
+
+    /// <summary>Wickets in a row by the bowler of the last ball, counting only his own deliveries (other bowlers' overs in between do not matter).
+    /// A wide or no-ball that is not itself a wicket is not a delivery for this purpose. 3 is a hat-trick. 0 when the last ball was not his wicket.</summary>
+    public static int WicketStreak(IReadOnlyList<Ball> balls)
+    {
+        if (balls.Count == 0 || !CreditedToBowler(balls[^1])) return 0;
+        var bowler = balls[^1].BowlerId;
+        var count = 0;
+        for (var i = balls.Count - 1; i >= 0; i--)
+        {
+            var b = balls[i];
+            if (b.BowlerId != bowler) continue;
+            if (!b.IsLegal && !b.IsWicket) continue;
+            if (!CreditedToBowler(b)) break;
+            count++;
+        }
+        return count;
+    }
+
     public static (string Label, string Kind) Chip(Ball b, MatchRules rules)
     {
         var total = b.RunsBat + b.RunsExtra;
@@ -348,6 +433,7 @@ public static class MatchStateBuilder
                 Partnership = new PartnershipDto { Runs = c.PartnerRuns, Balls = c.PartnerBalls },
                 Powerplay = inProgress && !rules.IsTest && CricketRules.IsPowerplay(completedOvers, rules),
                 NewBallDue = inProgress && rules.NewBallAfterOvers > 0 && completedOvers == rules.NewBallAfterOvers,
+                PowerSurge = !rules.IsTest ? PowerSurgeState(latest, rules, c.LegalBalls, inProgress) : null,
             };
 
             if (rules.OversPerInnings > 0 && !rules.IsTest)
@@ -417,7 +503,41 @@ public static class MatchStateBuilder
             if (last is not null)
             {
                 var (label, kind) = Chip(last, rules);
-                dto.LastBall = new LastBallDto { BallId = last.Id, Label = label, Kind = kind, Runs = last.RunsBat + last.RunsExtra };
+                // a batter out for nought: Golden = out to the first ball he faced, Diamond = out without facing one
+                string? duckType = null;
+                if (last.IsWicket && last.Dismissal is { } dd && c.Bat.GetValueOrDefault(dd.DismissedPlayerId) is { Runs: 0 } duckAcc)
+                    duckType = duckAcc.Balls == 0 ? "Diamond" : duckAcc.Balls == 1 ? "Golden" : "Duck";
+                dto.LastBall = new LastBallDto { BallId = last.Id, Label = label, Kind = kind, Runs = last.RunsBat + last.RunsExtra, SixStreak = SixStreak(c.Balls), FourStreak = FourStreak(c.Balls), DuckType = duckType, DuckName = duckType is null ? null : Name(last.Dismissal!.DismissedPlayerId), WicketStreak = WicketStreak(c.Balls), SixDistance = last.IsSix ? last.SixDistance : null };
+            }
+            if (last is not null)
+            {
+                // ---- milestones reached on this very ball ----
+                if (last.RunsBat > 0 && c.Bat.TryGetValue(last.StrikerId, out var sa))
+                {
+                    var before = sa.Runs - last.RunsBat;
+                    foreach (var t in new[] { 50, 100, 150, 200, 250, 300 })
+                        if (before < t && sa.Runs >= t)
+                            dto.Milestones.Add(new MilestoneDto {
+                                Id = $"{last.Id}:runs:{t}", Kind = "Runs", Value = t, PlayerId = last.StrikerId, Name = Name(last.StrikerId), PhotoUrl = Photo(last.StrikerId),
+                                Detail = $"{sa.Runs} ({sa.Balls})  {sa.Fours}x4  {sa.Sixes}x6",
+                            });
+                }
+                if (last.IsWicket && c.Bowl.TryGetValue(last.BowlerId, out var wa) && wa.Wickets is 4 or 5
+                    && last.Dismissal is { } dm && dm.DismissalType is not (DismissalType.RunOut or DismissalType.RetiredHurt or DismissalType.TimedOut or DismissalType.ObstructingField or DismissalType.HandledBall))
+                    dto.Milestones.Add(new MilestoneDto {
+                        Id = $"{last.Id}:wkts:{wa.Wickets}", Kind = wa.Wickets == 5 ? "FiveWickets" : "FourWickets", Value = wa.Wickets, PlayerId = last.BowlerId, Name = Name(last.BowlerId), PhotoUrl = Photo(last.BowlerId),
+                        Detail = $"{wa.Wickets}-{wa.Runs} ({CricketRules.FormatOvers(wa.LegalBalls, bpo)})",
+                    });
+                var lastOver = latest.Overs.FirstOrDefault(o => o.Id == last.OverId);
+                if (lastOver is { IsCompleted: true } && last.IsLegal)
+                {
+                    var lv = lastOver.Balls.Where(b => !b.IsVoided).ToList();
+                    if (lv.Count(b => b.IsLegal) >= bpo && lv.Select(b => b.BowlerId).Distinct().Count() == 1 && lv.Sum(b => b.BowlerRuns) == 0 && c.Bowl.TryGetValue(lv[0].BowlerId, out var ma))
+                        dto.Milestones.Add(new MilestoneDto {
+                            Id = $"{last.Id}:maiden", Kind = "Maiden", Value = ma.Maidens, PlayerId = lv[0].BowlerId, Name = Name(lv[0].BowlerId), PhotoUrl = Photo(lv[0].BowlerId),
+                            Detail = $"{CricketRules.FormatOvers(ma.LegalBalls, bpo)}-{ma.Maidens}-{ma.Runs}-{ma.Wickets}",
+                        });
+                }
             }
             foreach (var o in latest.Overs.Where(o => o.Balls.Any(b => !b.IsVoided)).OrderByDescending(o => o.OverNumber).Take(2).Reverse())
             {
@@ -444,6 +564,11 @@ public static class MatchStateBuilder
 
         dto.LastPenalty = ParsePenalty(lastPenalty);
         dto.Lineups = new LineupsDto { Home = BuildLineup(m, m.HomeTeam), Away = BuildLineup(m, m.AwayTeam) };
+        if (m.BreakKind is { } bk && m.Status is MatchStatus.Paused or MatchStatus.RainDelay)
+            dto.Break = new BreakDto {
+                Kind = bk.ToString(), Label = BreakKinds.Label(bk), PlannedSeconds = m.BreakPlannedSeconds,
+                ElapsedSeconds = m.BreakStartedAt is { } started ? Math.Max(0, (int)(DateTimeOffset.UtcNow - started).TotalSeconds) : 0,
+            };
         dto.WinProbability = new WinProbabilityDto { Home = m.WinProbHome, Draw = m.WinProbDraw, Away = m.WinProbAway };
 
         // ---- graphics ----
